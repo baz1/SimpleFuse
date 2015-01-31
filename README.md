@@ -1,6 +1,6 @@
 # SimpleFuse
 
-SimpleFuse - alias Simplified Filesystem in Userspace - was created to provide a much more simple interface than [FUSE](fuse.sourceforge.net) itself for the developers.
+SimpleFuse - alias Simplified Filesystem in Userspace - was created to provide a much more simple interface than [FUSE](http://fuse.sourceforge.net/) itself for the developers.
 
 This simplification does not come without some drawbacks however: many UNIX features are not supported in this library.
 Such features include file ownership and special files.
