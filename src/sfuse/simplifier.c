@@ -39,12 +39,6 @@ int s_getattr(const char *path, struct stat *statbuf)
 	return 0;
 }
 
-int s_readlink(const char *path, char *link, size_t size)
-{
-	dispLog(PERSDATA, "Warning: Entered s_readlink with \"%s\"\n", path);
-	return -EINVAL;
-}
-
 int s_mknod(const char *path, mode_t mode, dev_t dev)
 {
 	lString lPath = toLString(path);
@@ -85,12 +79,6 @@ int s_rmdir(const char *path)
 	if (lPath.str_len > STR_LEN_MAX)
 		return -ENAMETOOLONG;
 	return sRmFile(lPath, true);
-}
-
-int s_symlink(const char *path, const char *link)
-{
-	dispLog(PERSDATA, "Warning: Entered s_symlink with \"%s\" --> \"%s\"\n", path, link);
-	return -EPERM;
 }
 
 int s_rename(const char *path, const char *newpath)
@@ -178,13 +166,13 @@ int s_open(const char *path, struct fuse_file_info *fi)
 
 struct fuse_operations s_oper = {
 	.getattr = s_getattr,
-	.readlink = s_readlink,
+	.readlink = NULL,
 	.getdir = NULL,
 	.mknod = s_mknod,
 	.mkdir = s_mkdir,
 	.unlink = s_unlink,
 	.rmdir = s_rmdir,
-	.symlink = s_symlink,
+	.symlink = NULL,
 	.rename = s_rename,
 	.link = s_link,
 	.chmod = s_chmod,
