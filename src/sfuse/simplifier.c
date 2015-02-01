@@ -177,6 +177,12 @@ int s_write(const char *path, const char *buf, size_t size, off_t offset, struct
 	return sWrite(fi->fh, buf, (int) size, offset);
 }
 
+int s_flush(const char *path, struct fuse_file_info *fi)
+{
+	// I did not really get the difference with a normal sync, but let's do the same action.
+	return sSync(fi->fh);
+}
+
 // TODO: Add unimplemented methods
 
 struct fuse_operations s_oper = {

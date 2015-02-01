@@ -68,3 +68,6 @@ int sRead(int fd, void *buf, int count, off_t offset);
 /* Write open file */
 int sWrite(int fd, const void *buf, int count, off_t offset);
 
+/* Flush cached data. */
+int sSync(int fd);
+

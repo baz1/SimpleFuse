@@ -193,3 +193,14 @@ int sWrite(int fd, const void *buf, int count, off_t offset)
 	return 0;
 }
 
+int sSync(int fd)
+{
+	// Flush any cached data for the file {fd}.
+	// On success, return 0.
+	// Else, -error_number where error_number is:
+	//  EBADF: {fd} is not a valid file descriptor.
+	//  IO: I/O error.
+	// TODO
+	return 0;
+}
+
