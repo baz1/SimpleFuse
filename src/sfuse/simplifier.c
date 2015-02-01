@@ -33,7 +33,7 @@ int s_getattr(const char *path, struct stat *statbuf)
 	statbuf->st_mode = result.st_mode;
 	statbuf->st_nlink = result.st_nlink;
 	statbuf->st_size = (result.st_mode & 0x4000) ? 0x1000 : result.st_size;
-	statbuf->st_blocks = (statbuf->st_size & 0x01FF) ? ((statbuf->st_size >> 9) + 1) : (statbuf->st_size >> 9); // really useful ???
+	statbuf->st_blocks = (statbuf->st_size + 0x01FF) >> 9; // really useful ???
 	statbuf->st_atim.tv_sec = result.st_atime;
 	statbuf->st_mtim.tv_sec = result.st_mtime;
 	statbuf->st_ctim.tv_sec = result.st_mtime;
