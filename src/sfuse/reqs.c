@@ -229,3 +229,14 @@ int sOpenDir(const lString &addr, int &fd)
 	return 0;
 }
 
+int sReadDir(int fd, char *&name)
+{
+	// Read the next entry in the directory stream of {fd}.
+	// This puts the name of this entry in {name} (changing its pointer value) or NULL if there is no more (no error then).
+	// On success, return 0.
+	// Else, -error_number where error_number is:
+	//  EBADF: {fd} is not a valid directory descriptor opened for reading.
+	// TODO
+	return 0;
+}
+

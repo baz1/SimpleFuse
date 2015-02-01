@@ -77,3 +77,6 @@ int sClose(int fd);
 /* Open a directory */
 int sOpenDir(const lString &addr, int &fd);
 
+/* Read a directory entry */
+int sReadDir(int fd, char *&name);
+

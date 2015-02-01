@@ -202,6 +202,22 @@ int s_opendir(const char *path, struct fuse_file_info *fi)
 	return sOpenDir(lPath, fi->fh);
 }
 
+int s_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offset,
+	struct fuse_file_info *fi)
+{
+	int retval;
+	char *name;
+	while (((retval = sReadDir(fi->fh, &name)) == 0) && name)
+	{
+		if (filler(buf, name, NULL, 0) != 0)
+		{
+			dispLog(PERSDATA, "Warning: readdir filler:  buffer full\n");
+			return -ENOMEM;
+		}
+	}
+	return retval;
+}
+
 // TODO: Add unimplemented methods
 
 struct fuse_operations s_oper = {
