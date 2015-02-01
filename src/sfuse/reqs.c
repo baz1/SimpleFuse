@@ -173,7 +173,22 @@ int sRead(int fd, void *buf, int count, off_t offset)
 	//  EAGAIN: The file has been marked nonblocking, and the read would block.
 	//  EBADF: {fd} is not a valid file descriptor or is not open for reading.
 	//  IO: I/O error.
-	//  EOVERFLOW: Too large offset
+	//  EOVERFLOW: Too large offset.
+	// TODO
+	return 0;
+}
+
+int sWrite(int fd, const void *buf, int count, off_t offset)
+{
+	// Write {count} bytes in file {fd}, offset {offset}, from the buffer {buf}.
+	// On success, return the number of bytes written ({count}).
+	// Else, -error_number where error_number is:
+	//  EAGAIN: The file has been marked nonblocking, and the write would block.
+	//  EBADF: {fd} is not a valid file descriptor or is not open for writing.
+	//  IO: I/O error.
+	//  EOVERFLOW: Too large offset.
+	//  EFBIG: Attempted to write past the maximum offset.
+	//  ENOSPC: Not enough space left.
 	// TODO
 	return 0;
 }

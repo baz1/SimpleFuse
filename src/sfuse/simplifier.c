@@ -170,6 +170,13 @@ int s_read(const char *path, char *buf, size_t size, off_t offset, struct fuse_f
 	return sRead(fi->fh, buf, (int) size, offset);
 }
 
+int s_write(const char *path, const char *buf, size_t size, off_t offset, struct fuse_file_info *fi)
+{
+	if (size > INT_MAX)
+		return -EINVAL;
+	return sWrite(fi->fh, buf, (int) size, offset);
+}
+
 // TODO: Add unimplemented methods
 
 struct fuse_operations s_oper = {

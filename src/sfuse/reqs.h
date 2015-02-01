@@ -65,3 +65,6 @@ int sOpen(const lString &addr, int flags, int &fd);
 /* Read open file */
 int sRead(int fd, void *buf, int count, off_t offset);
 
+/* Write open file */
+int sWrite(int fd, const void *buf, int count, off_t offset);
+
