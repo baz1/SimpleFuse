@@ -215,3 +215,17 @@ int sClose(int fd)
 	return 0;
 }
 
+int sOpenDir(const lString &addr, int &fd)
+{
+	// Open the directory {addr}
+	// fd is set to an arbitrary filehandle (positive integer) if successful.
+	// On success, return 0.
+	// Else, -error_number where error_number is:
+	//  EACCESS: Permission denied.
+	//  ENFILE: Too many files are currently open in the system.
+	//  ENOENT: Directory does not exist, or {addr} is an empty string.
+	//  ENOTDIR: {addr} is not a directory.
+	// TODO
+	return 0;
+}
+

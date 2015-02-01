@@ -194,6 +194,14 @@ int s_fsync(const char *path, int datasync, struct fuse_file_info *fi)
 	return sSync(fi->fh);
 }
 
+int s_opendir(const char *path, struct fuse_file_info *fi)
+{
+	lString lPath = toLString(path);
+	if (lPath.str_len > STR_LEN_MAX)
+		return -ENAMETOOLONG;
+	return sOpenDir(lPath, fi->fh);
+}
+
 // TODO: Add unimplemented methods
 
 struct fuse_operations s_oper = {

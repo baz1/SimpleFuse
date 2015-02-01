@@ -74,3 +74,6 @@ int sSync(int fd);
 /* Close a file. */
 int sClose(int fd);
 
+/* Open a directory */
+int sOpenDir(const lString &addr, int &fd);
+
