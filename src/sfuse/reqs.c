@@ -217,7 +217,7 @@ int sClose(int fd)
 
 int sOpenDir(const lString &addr, int &fd)
 {
-	// Open the directory {addr}
+	// Open the directory {addr}.
 	// fd is set to an arbitrary filehandle (positive integer) if successful.
 	// On success, return 0.
 	// Else, -error_number where error_number is:
@@ -233,6 +233,16 @@ int sReadDir(int fd, char *&name)
 {
 	// Read the next entry in the directory stream of {fd}.
 	// This puts the name of this entry in {name} (changing its pointer value) or NULL if there is no more (no error then).
+	// On success, return 0.
+	// Else, -error_number where error_number is:
+	//  EBADF: {fd} is not a valid directory descriptor opened for reading.
+	// TODO
+	return 0;
+}
+
+int sCloseDir(int fd)
+{
+	// Close the directory {fd}.
 	// On success, return 0.
 	// Else, -error_number where error_number is:
 	//  EBADF: {fd} is not a valid directory descriptor opened for reading.
