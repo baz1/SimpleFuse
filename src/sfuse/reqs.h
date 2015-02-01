@@ -36,29 +36,29 @@ typedef struct PersistentData_struct
 lString toLString(char *str);
 
 /* Get file attributes */
-bool sGetAttr(const lString &addr, sAttr &attr);
+int sGetAttr(const lString &addr, sAttr &attr);
 
 /* Create a file */
-bool sMkFile(const lString &addr, mode_t st_mode);
+int sMkFile(const lString &addr, mode_t st_mode);
 
 /* Remove a file */
-bool sRmFile(const lString &addr, bool isDir);
+int sRmFile(const lString &addr, bool isDir);
 
 /* Rename a file */
-bool sMvFile(const lString &addrFrom, const lString &addrTo);
+int sMvFile(const lString &addrFrom, const lString &addrTo);
 
 /* Make a link */
-bool sLink(const lString &addrFrom, const lString &addrTo);
+int sLink(const lString &addrFrom, const lString &addrTo);
 
 /* Change file permissions */
-bool sChMod(const lString &addr, mode_t st_mode);
+int sChMod(const lString &addr, mode_t st_mode);
 
 /* Change the size of a file */
-bool sTruncate(const lString &addr, off_t newsize);
+int sTruncate(const lString &addr, off_t newsize);
 
 /* Change last modification/access time of a file */
-bool sUTime(const lString &addr, time_t st_atime, time_t st_mtime);
+int sUTime(const lString &addr, time_t st_atime, time_t st_mtime);
 
 /* Open a file */
-int sOpen(const lString &addr, int flags);
+int sOpen(const lString &addr, int flags, int &fd);
 

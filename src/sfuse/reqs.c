@@ -14,22 +14,23 @@ lString toLString(char *str)
 	return result;
 }
 
-bool sGetAttr(const lString &addr, sAttr &attr)
+int sGetAttr(const lString &addr, sAttr &attr)
 {
-	// On success, return true
-	// Else, false with errno set to:
+	// On success, return 0.
+	// Else, -error_number where error_number is:
 	//  EFAULT: Bad address.
 	//  ENOENT: A component of pathname does not exist, or pathname is an empty string.
 	//  ENOTDIR: A component of the path prefix of pathname is not a directory.
 	// TODO
-	return true;
+	return 0;
 }
 
-bool sMkFile(const lString &addr, mode_t st_mode)
+int sMkFile(const lString &addr, mode_t st_mode)
 {
 	// Create the file {addr} with the permissions ({mode} & 0x1FF).
 	// File if ((mode & 0xFE00) == 0x8000), Directory if ((mode & 0xFE00) == 0x4000), no alternative.
-	// May return false in case there is an error. errno is then set to:
+	// On success, return 0.
+	// Else, -error_number where error_number is:
 	//  EACCES: The parent directory does not allow write permission to the process, or one of the directories in the path prefix of pathname did not allow search permission.
 	//  ENOSPC: Not enough space left.
 	//  EEXIST: pathname already exists (as a file or directory).
@@ -38,13 +39,14 @@ bool sMkFile(const lString &addr, mode_t st_mode)
 	//  ENOTDIR: A component of the path prefix of pathname is not a directory.
 	//  EROFS: pathname refers to a file on a read-only filesystem.
 	// TODO
-	return true;
+	return 0;
 }
 
-bool sRmFile(const lString &addr, bool isDir)
+int sRmFile(const lString &addr, bool isDir)
 {
 	// Remove the file {addr}.
-	// May return false in case there is an error. errno is then set to:
+	// On success, return 0.
+	// Else, -error_number where error_number is:
 	//  EACCES: The parent directory does not allow write permission to the process, or one of the directories in the path prefix of pathname did not allow search permission.
 	//  EBUSY: The file pathname cannot be unlinked because it is being used by the system or another process.
 	//  EISDIR: pathname refers to a directory (and if isDir == false).
@@ -55,13 +57,14 @@ bool sRmFile(const lString &addr, bool isDir)
 	//  ENOTEMPTY: pathname contains entries other than . and .. ; or, pathname has .. as its final component (and if isDir == true).
 	//  EROFS: pathname refers to a file on a read-only filesystem.
 	// TODO
-	return true;
+	return 0;
 }
 
-bool sMvFile(const lString &addrFrom, const lString &addrTo)
+int sMvFile(const lString &addrFrom, const lString &addrTo)
 {
 	// Rename the file {addrFrom} to {addrTo}.
-	// May return false in case there is an error. errno is then set to:
+	// On success, return 0.
+	// Else, -error_number where error_number is:
 	//  EACCES: The parent directory does not allow write permission to the process, or one of the directories in the path prefix of pathname did not allow search permission.
 	//  EBUSY: (busy)
 	//  EINVAL: The new pathname contained a path prefix of the old, or, more generally, an attempt was made to make a directory a subdirectory of itself.
@@ -73,13 +76,14 @@ bool sMvFile(const lString &addrFrom, const lString &addrTo)
 	//  ENOTEMPTY: newpath is a nonempty directory, that is, contains entries other than "." and "..".
 	//  EROFS: Read-only filesystem.
 	// TODO
-	return true;
+	return 0;
 }
 
-bool sLink(const lString &addrFrom, const lString &addrTo)
+int sLink(const lString &addrFrom, const lString &addrTo)
 {
 	// Create a (hard) link from {addrFrom} to {addrTo} (these are not directories).
-	// May return false in case there is an error. errno is then set to:
+	// On success, return 0.
+	// Else, -error_number where error_number is:
 	//  EACCES: The parent directory does not allow write permission to the process, or one of the directories in the path prefix of pathname did not allow search permission.
 	//  EEXIST: {addrTo} already exists (as a file or directory).
 	//  EMLINK: The file referred to by oldpath already has the maximum number of links to it.
@@ -90,13 +94,14 @@ bool sLink(const lString &addrFrom, const lString &addrTo)
 	//  EPERM: The filesystem containing oldpath and newpath does not support the creation of hard links.
 	//  EROFS: Read-only filesystem.
 	// TODO
-	return true;
+	return 0;
 }
 
-bool sChMod(const lString &addr, mode_t st_mode)
+int sChMod(const lString &addr, mode_t st_mode)
 {
 	// Change the permissions of the file {addr} to ({st_mode} & 0x199)
-	// May return false in case there is an error. errno is then set to:
+	// On success, return 0.
+	// Else, -error_number where error_number is:
 	//  EACCES: The parent directory does not allow write permission to the process, or one of the directories in the path prefix of pathname did not allow search permission.
 	//  ENOENT: A directory component in pathname does not exist / the file does not exist.
 	//  ENOTDIR: A component of the path prefix of pathname is not a directory.
@@ -106,10 +111,11 @@ bool sChMod(const lString &addr, mode_t st_mode)
 	return true;
 }
 
-bool sTruncate(const lString &addr, off_t newsize)
+int sTruncate(const lString &addr, off_t newsize)
 {
 	// Change the size of the regular file {addr} to {newsize} bytes.
-	// May return false in case there is an error. errno is then set to:
+	// On success, return 0.
+	// Else, -error_number where error_number is:
 	//  EACCES: The parent directory does not allow write permission to the process, or one of the directories in the path prefix of pathname did not allow search permission.
 	//  EINVAL: The argument {newsize} is larger than the maximum file size.
 	//  EISDIR: The named file is a directory.
@@ -119,22 +125,23 @@ bool sTruncate(const lString &addr, off_t newsize)
 	//  EPERM: The underlying filesystem does not support extending a file beyond its current size.
 	//  EROFS: Read-only filesystem.
 	// TODO
-	return true;
+	return 0;
 }
 
-bool sUTime(const lString &addr, time_t st_atime, time_t st_mtime)
+int sUTime(const lString &addr, time_t st_atime, time_t st_mtime)
 {
 	// Change the last access date to st_atime and modification date to st_mtime.
-	// May return false in case there is an error. errno is then set to:
+	// On success, return 0.
+	// Else, -error_number where error_number is:
 	//  EACCES: The parent directory does not allow write permission to the process, or one of the directories in the path prefix of pathname did not allow search permission.
 	//  ENOENT: A directory component in pathname does not exist / the file does not exist.
 	//  ENOTDIR: A component of the path prefix of pathname is not a directory (not in man ???).
 	//  EROFS: Read-only filesystem.
 	// TODO
-	return true;
+	return 0;
 }
 
-int sOpen(const lString &addr, int flags)
+int sOpen(const lString &addr, int flags, int &fd)
 {
 	// Open the regular file {addr} according to the {flags} parameter:
 	// O_RDONLY / O_WRONLY / O_RDWR for read-only, write-only, or read/write, respectively.
@@ -143,8 +150,9 @@ int sOpen(const lString &addr, int flags)
 	//  (O_DIRECT | O_DSYNC | O_SYNC): Do not use buffers
 	//  O_NOATIME: Do not update atime.
 	//  (O_NONBLOCK | O_NDELAY): Nonblocking mode.
-	// Returns an arbitrary filehandle (positive integer) if successful.
-	// Otherwise, returns -1 with errno set to:
+	// fd is set to an arbitrary filehandle (positive integer) if successful.
+	// On success, return 0.
+	// Else, -error_number where error_number is:
 	//  EACCES: The parent directory does not allow write permission to the process, or one of the directories in the path prefix of pathname did not allow search permission.
 	//  EINTR: Timeout (for slow FS with a failing timeout)
 	//  EISDIR: {addr} refers to an existing directory

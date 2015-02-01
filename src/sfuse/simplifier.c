@@ -22,13 +22,11 @@ int s_getattr(const char *path, struct stat *statbuf)
 {
 	lString lPath = toLString(path);
 	if (lPath.str_len > STR_LEN_MAX)
-	{
-		errno = ENAMETOOLONG;
 		return -ENAMETOOLONG;
-	}
 	sAttr result;
-	if (sGetAttr(lPath, result) == -1)
-		return -errno;
+	int ret_value;
+	if ((ret_value = sGetAttr(lPath, result)) < 0)
+		return ret_value;
 	PersistentData *data = PERSDATA;
 	*statbuf = data->def_stat;
 	statbuf->st_mode = result.st_mode;
@@ -44,7 +42,6 @@ int s_getattr(const char *path, struct stat *statbuf)
 int s_readlink(const char *path, char *link, size_t size)
 {
 	dispLog(PERSDATA, "Warning: Entered s_readlink with \"%s\"\n", path);
-	errno = EINVAL;
 	return -EINVAL;
 }
 
@@ -52,70 +49,47 @@ int s_mknod(const char *path, mode_t mode, dev_t dev)
 {
 	lString lPath = toLString(path);
 	if (lPath.str_len > STR_LEN_MAX)
-	{
-		errno = ENAMETOOLONG;
 		return -ENAMETOOLONG;
-	}
 	if ((mode & 0xFE00) != 0x8000)
 	{
 		dispLog(PERSDATA, "Warning: s_mknod on \"%s\" with mode 0%o\n", path, mode);
-		errno = EPERM;
 		return -EPERM;
 	}
-	if (sMkFile(lPath, mode) == -1)
-		return -errno;
-	return 0;
+	return sMkFile(lPath, mode);
 }
 
 int s_mkdir(const char *path, mode_t mode)
 {
 	lString lPath = toLString(path);
 	if (lPath.str_len > STR_LEN_MAX)
-	{
-		errno = ENAMETOOLONG;
 		return -ENAMETOOLONG;
-	}
 	if ((mode & 0xFE00) != 0x4000)
 	{
 		dispLog(PERSDATA, "Warning: s_mkdir on \"%s\" with mode 0%o\n", path, mode);
-		errno = EPERM;
 		return -EPERM;
 	}
-	if (sMkFile(lPath, mode) == -1)
-		return -errno;
-	return 0;
+	return sMkFile(lPath, mode);
 }
 
 int s_unlink(const char *path)
 {
 	lString lPath = toLString(path);
 	if (lPath.str_len > STR_LEN_MAX)
-	{
-		errno = ENAMETOOLONG;
 		return -ENAMETOOLONG;
-	}
-	if (sRmFile(lPath, false) == -1)
-		return -errno;
-	return 0;
+	return sRmFile(lPath, false);
 }
 
 int s_rmdir(const char *path)
 {
 	lString lPath = toLString(path);
 	if (lPath.str_len > STR_LEN_MAX)
-	{
-		errno = ENAMETOOLONG;
 		return -ENAMETOOLONG;
-	}
-	if (sRmFile(lPath, true) == -1)
-		return -errno;
-	return 0;
+	return sRmFile(lPath, true);
 }
 
 int s_symlink(const char *path, const char *link)
 {
 	dispLog(PERSDATA, "Warning: Entered s_symlink with \"%s\" --> \"%s\"\n", path, link);
-	errno = EPERM;
 	return -EPERM;
 }
 
@@ -123,38 +97,22 @@ int s_rename(const char *path, const char *newpath)
 {
 	lString lPathFrom = toLString(path);
 	if (lPathFrom.str_len > STR_LEN_MAX)
-	{
-		errno = ENAMETOOLONG;
 		return -ENAMETOOLONG;
-	}
 	lString lPathTo = toLString(newpath);
 	if (lPathTo.str_len > STR_LEN_MAX)
-	{
-		errno = ENAMETOOLONG;
 		return -ENAMETOOLONG;
-	}
-	if (sMvFile(lPathFrom, lPathTo) == -1)
-		return -errno;
-	return 0;
+	return sMvFile(lPathFrom, lPathTo);
 }
 
 int s_link(const char *path, const char *newpath)
 {
 	lString lPathFrom = toLString(newpath);
 	if (lPathFrom.str_len > STR_LEN_MAX)
-	{
-		errno = ENAMETOOLONG;
 		return -ENAMETOOLONG;
-	}
 	lString lPathTo = toLString(path);
 	if (lPathTo.str_len > STR_LEN_MAX)
-	{
-		errno = ENAMETOOLONG;
 		return -ENAMETOOLONG;
-	}
-	if (sLink(lPathFrom, lPathTo) == -1)
-		return -errno;
-	return 0;
+	return sLink(lPathFrom, lPathTo);
 }
 
 int s_chmod(const char *path, mode_t mode)
@@ -162,53 +120,35 @@ int s_chmod(const char *path, mode_t mode)
 	if (mode & 0xE00)
 	{
 		dispLog(PERSDATA, "Warning: s_chmod on \"%s\" with mode 0%o\n", path, mode);
-		errno = EPERM;
 		return -EPERM;
 	}
 	lString lPath = toLString(path);
 	if (lPath.str_len > STR_LEN_MAX)
-	{
-		errno = ENAMETOOLONG;
 		return -ENAMETOOLONG;
-	}
-	if (sChMod(lPath, mode) == -1)
-		return -errno;
-	return 0;
+	return sChMod(lPath, mode);
 }
 
 int s_chown(const char *path, uid_t uid, gid_t gid)
 {
 	dispLog(PERSDATA, "Warning: Entered s_chown with \"%s\" --> %d:%d\n", path, uid, gid);
-	errno = EPERM;
 	return -EPERM;
 }
 
 int s_truncate(const char *path, off_t newsize)
 {
 	if (newsize < 0)
-	{
-		errno = EINVAL;
 		return -EINVAL;
-	}
 	lString lPath = toLString(path);
 	if (lPath.str_len > STR_LEN_MAX)
-	{
-		errno = ENAMETOOLONG;
 		return -ENAMETOOLONG;
-	}
-	if (sTruncate(lPath, newsize) == -1)
-		return -errno;
-	return 0;
+	return sTruncate(lPath, newsize);
 }
 
 int s_utime(const char *path, struct utimbuf *ubuf)
 {
 	lString lPath = toLString(path);
 	if (lPath.str_len > STR_LEN_MAX)
-	{
-		errno = ENAMETOOLONG;
 		return -ENAMETOOLONG;
-	}
 	time_t st_atime, st_mtime;
 	if (ubuf)
 	{
@@ -218,9 +158,7 @@ int s_utime(const char *path, struct utimbuf *ubuf)
 		time(&st_atime);
 		st_mtime = st_atime;
 	}
-	if (sUTime(lPath, st_atime, st_mtime) == -1)
-		return -errno;
-	return 0;
+	return sUTime(lPath, st_atime, st_mtime);
 }
 
 int s_open(const char *path, struct fuse_file_info *fi)
@@ -228,19 +166,12 @@ int s_open(const char *path, struct fuse_file_info *fi)
 	if (fi->flags & (O_ASYNC | O_DIRECTORY | O_TMPFILE | O_CREAT | O_EXCL | O_TRUNC | O_PATH))
 	{
 		dispLog(PERSDATA, "Warning: s_open on \"%s\" with flags 0x%08x\n", path, fi->flags);
-		errno = EOPNOTSUPP;
 		return -EOPNOTSUPP;
 	}
 	lString lPath = toLString(path);
 	if (lPath.str_len > STR_LEN_MAX)
-	{
-		errno = ENAMETOOLONG;
 		return -ENAMETOOLONG;
-	}
-	fi->fh = sOpen(lPath, fi->flags);
-	if (fi->fh < 0)
-		return -errno;
-	return 0;
+	return sOpen(lPath, fi->flags, fi->fh);
 }
 
 // TODO: Add unimplemented methods
