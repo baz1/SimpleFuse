@@ -62,3 +62,6 @@ int sUTime(const lString &addr, time_t st_atime, time_t st_mtime);
 /* Open a file */
 int sOpen(const lString &addr, int flags, int &fd);
 
+/* Read open file */
+int sRead(int fd, void *buf, int count, off_t offset);
+

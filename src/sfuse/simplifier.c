@@ -13,6 +13,7 @@
 #include <fuse.h>
 #include <stdio.h>
 #include <time.h>
+#include <limits.h>
 
 #include "reqs.h"
 
@@ -160,6 +161,13 @@ int s_open(const char *path, struct fuse_file_info *fi)
 	if (lPath.str_len > STR_LEN_MAX)
 		return -ENAMETOOLONG;
 	return sOpen(lPath, fi->flags, fi->fh);
+}
+
+int s_read(const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fi)
+{
+	if (size > INT_MAX)
+		return -EINVAL;
+	return sRead(fi->fh, buf, (int) size, offset);
 }
 
 // TODO: Add unimplemented methods

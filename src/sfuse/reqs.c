@@ -165,3 +165,16 @@ int sOpen(const lString &addr, int flags, int &fd)
 	return 0;
 }
 
+int sRead(int fd, void *buf, int count, off_t offset)
+{
+	// Read {count} bytes from file {fd}, offset {offset}, inside the buffer {buf}.
+	// On success, return the number of bytes read ({count} if EOF not reached).
+	// Else, -error_number where error_number is:
+	//  EAGAIN: The file has been marked nonblocking, and the read would block.
+	//  EBADF: {fd} is not a valid file descriptor or is not open for reading.
+	//  IO: I/O error.
+	//  EOVERFLOW: Too large offset
+	// TODO
+	return 0;
+}
+
