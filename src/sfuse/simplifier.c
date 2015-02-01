@@ -188,6 +188,12 @@ int s_release(const char *path, struct fuse_file_info *fi)
 	return sClose(fi->fh);
 }
 
+int s_fsync(const char *path, int datasync, struct fuse_file_info *fi)
+{
+	// We do not care about meta data being flushed here.
+	return sSync(fi->fh);
+}
+
 // TODO: Add unimplemented methods
 
 struct fuse_operations s_oper = {
