@@ -71,3 +71,6 @@ int sWrite(int fd, const void *buf, int count, off_t offset);
 /* Flush cached data. */
 int sSync(int fd);
 
+/* Close a file. */
+int sClose(int fd);
+

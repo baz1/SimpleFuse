@@ -204,3 +204,14 @@ int sSync(int fd)
 	return 0;
 }
 
+int sClose(int fd)
+{
+	// Close the file {fd}.
+	// On success, return 0.
+	// Else, -error_number where error_number is:
+	//  EBADF: {fd} is not a valid open file descriptor.
+	//  IO: I/O error.
+	// TODO
+	return 0;
+}
+

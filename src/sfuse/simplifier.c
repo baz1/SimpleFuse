@@ -183,6 +183,11 @@ int s_flush(const char *path, struct fuse_file_info *fi)
 	return sSync(fi->fh);
 }
 
+int s_release(const char *path, struct fuse_file_info *fi)
+{
+	return sClose(fi->fh);
+}
+
 // TODO: Add unimplemented methods
 
 struct fuse_operations s_oper = {
