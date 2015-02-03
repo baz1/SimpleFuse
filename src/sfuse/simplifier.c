@@ -228,6 +228,11 @@ int s_fsyncdir(const char *path, int datasync, struct fuse_file_info *fi)
 	return 0; // Directories should always be directly synchronized.
 }
 
+void *s_init(struct fuse_conn_info *conn)
+{
+	return PERSDATA;
+}
+
 // TODO: Add unimplemented methods
 
 struct fuse_operations s_oper = {
