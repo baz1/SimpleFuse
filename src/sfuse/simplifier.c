@@ -330,14 +330,14 @@ struct fuse_operations s_oper = {
 	.create = s_create,
 	.ftruncate = s_ftruncate,
 	.fgetattr = s_fgetattr,
-	.lock = s_lock,
+	.lock = NULL,
 	.utimens = NULL, /* Fall back to utime implementation */
 	.bmap = NULL,
 	.ioctl = NULL,
 	.poll = s_poll,
 	.write_buf = NULL, /* Fall back to write implementation */
 	.read_buf = NULL, /* Fall back to read implementation */
-	.flock = s_flock,
+	.flock = NULL,
 	.fallocate = s_fallocate
 };
 
