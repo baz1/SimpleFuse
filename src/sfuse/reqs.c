@@ -250,3 +250,19 @@ int sCloseDir(int fd)
 	return 0;
 }
 
+int sAccess(const lString &addr, int mode)
+{
+	// Check access to a file / directory.
+	// If mode is F_OK, check if the file exists.
+	// Else, it is a mask of R_OK, W_OK and X_OK to test read, write and execute permissions.
+	// On success, return 0.
+	// Else, -error_number where error_number is:
+	//  EACCES: The requested access would be denied to the file, or search permission is denied for one of the directories in the path prefix of pathname.
+	//  ENOENT: A directory component in pathname does not exist.
+	//  ENOTDIR: A component of the path prefix of pathname is not a directory.
+	//  EROFS: Write permission was requested for a file on a read-only filesystem.
+	//  ETXTBSY: Write access was requested to an executable which is being executed.
+	// TODO
+	return 0;
+}
+

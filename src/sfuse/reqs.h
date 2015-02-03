@@ -68,10 +68,10 @@ int sRead(int fd, void *buf, int count, off_t offset);
 /* Write open file */
 int sWrite(int fd, const void *buf, int count, off_t offset);
 
-/* Flush cached data. */
+/* Flush cached data */
 int sSync(int fd);
 
-/* Close a file. */
+/* Close a file */
 int sClose(int fd);
 
 /* Open a directory */
@@ -82,4 +82,7 @@ int sReadDir(int fd, char *&name);
 
 /* Close a directory */
 int sCloseDir(int fd);
+
+/* Check access to a file */
+int sAccess(const lString &addr, int mode);
 

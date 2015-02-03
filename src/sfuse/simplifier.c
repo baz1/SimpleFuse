@@ -243,6 +243,14 @@ void s_destroy(void *userdata)
 	}
 }
 
+int s_access(const char *path, int mask)
+{
+	lString lPath = toLString(path);
+	if (lPath.str_len > STR_LEN_MAX)
+		return -ENAMETOOLONG;
+	return sAccess(lPath, mask);
+}
+
 // TODO: Add unimplemented methods
 
 struct fuse_operations s_oper = {
