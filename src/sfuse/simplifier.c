@@ -220,7 +220,12 @@ int s_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offset,
 
 int s_releasedir(const char *path, struct fuse_file_info *fi)
 {
-	sCloseDir(fi->fh);
+	return sCloseDir(fi->fh);
+}
+
+int s_fsyncdir(const char *path, int datasync, struct fuse_file_info *fi)
+{
+	return 0; // Directories should always be directly synchronized.
 }
 
 // TODO: Add unimplemented methods
