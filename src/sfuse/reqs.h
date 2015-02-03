@@ -86,3 +86,6 @@ int sCloseDir(int fd);
 /* Check access to a file */
 int sAccess(const lString &addr, int mode);
 
+/* Change the size of an open file */
+int sFTruncate(int fd, off_t newsize);
+

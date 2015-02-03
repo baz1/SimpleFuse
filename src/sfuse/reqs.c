@@ -267,3 +267,13 @@ int sAccess(const lString &addr, int mode)
 	return 0;
 }
 
+int sFTruncate(int fd, off_t newsize)
+{
+	// Change the size of the regular file {fd} to {newsize} bytes (same as sTruncate but with a file descriptor).
+	// On success, return 0.
+	// Else, -error_number where error_number is:
+	//  EBADF: {fd} is not a valid file descriptor opened for writing.
+	// TODO
+	return 0;
+}
+

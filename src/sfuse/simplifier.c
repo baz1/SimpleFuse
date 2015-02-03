@@ -269,6 +269,11 @@ int s_create(const char *path, mode_t mode, struct fuse_file_info *fi)
 	return sOpen(lPath, O_WRONLY, fi->fh);
 }
 
+int s_ftruncate(const char *path, off_t offset, struct fuse_file_info *fi)
+{
+	return sFTruncate(fi->fh, offset);
+}
+
 // TODO: Add unimplemented methods
 
 struct fuse_operations s_oper = {
