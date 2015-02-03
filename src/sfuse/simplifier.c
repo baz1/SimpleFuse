@@ -251,6 +251,24 @@ int s_access(const char *path, int mask)
 	return sAccess(lPath, mask);
 }
 
+int s_create(const char *path, mode_t mode, struct fuse_file_info *fi)
+{
+	lString lPath = toLString(path);
+	if (lPath.str_len > STR_LEN_MAX)
+		return -ENAMETOOLONG;
+	if ((mode & 0xFE00) != 0x8000)
+	{
+		dispLog(PERSDATA, "Warning: s_mknod on \"%s\" with mode 0%o\n", path, mode);
+		return -EPERM;
+	}
+	int retval = sMkFile(lPath, (mode & 0x1FF) | 0x8000);
+	if (retval == -EEXIST)
+		return sOpen(lPath, O_WRONLY | O_TRUNC, fi->fh);
+	if (retval < 0)
+		return retval;
+	return sOpen(lPath, O_WRONLY, fi->fh);
+}
+
 // TODO: Add unimplemented methods
 
 struct fuse_operations s_oper = {
