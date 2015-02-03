@@ -150,7 +150,6 @@ int sOpen(const lString &addr, int flags, int &fd)
 	//  O_APPEND: append (what if write/seek/write?)
 	//  (O_DIRECT | O_DSYNC | O_SYNC): Do not use buffers
 	//  O_NOATIME: Do not update atime.
-	//  (O_NONBLOCK | O_NDELAY): Nonblocking mode.
 	//  O_TRUNC: Truncate file to length 0 (must have write access).
 	// fd is set to an arbitrary filehandle (positive integer) if successful.
 	// On success, return 0.

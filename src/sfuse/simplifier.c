@@ -157,6 +157,7 @@ int s_open(const char *path, struct fuse_file_info *fi)
 		dispLog(PERSDATA, "Warning: s_open on \"%s\" with flags 0x%08x\n", path, fi->flags);
 		return -EOPNOTSUPP;
 	}
+	// O_NONBLOCK and O_NDELAY simply ignored.
 	lString lPath = toLString(path);
 	if (lPath.str_len > STR_LEN_MAX)
 		return -ENAMETOOLONG;
