@@ -339,7 +339,7 @@ struct fuse_operations s_oper = {
 	.write_buf = NULL, /* Fall back to write implementation */
 	.read_buf = NULL, /* Fall back to read implementation */
 	.flock = NULL,
-	.fallocate = s_fallocate
+	.fallocate = NULL
 };
 
 int main(int argc, char *argv[])
