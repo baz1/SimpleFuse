@@ -293,8 +293,6 @@ int s_fgetattr(const char *path, struct stat *statbuf, struct fuse_file_info *fi
 	return 0;
 }
 
-// TODO: Add unimplemented methods
-
 struct fuse_operations s_oper = {
 	.getattr = s_getattr,
 	.readlink = NULL,
