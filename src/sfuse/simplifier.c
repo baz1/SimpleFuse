@@ -205,9 +205,9 @@ int s_opendir(const char *path, struct fuse_file_info *fi)
 int s_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offset,
 	struct fuse_file_info *fi)
 {
-	int retval;
+	int ret_value;
 	char *name;
-	while (((retval = sReadDir(fi->fh, &name)) == 0) && name)
+	while (((ret_value = sReadDir(fi->fh, &name)) == 0) && name)
 	{
 		if (filler(buf, name, NULL, 0) != 0)
 		{
@@ -215,7 +215,7 @@ int s_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offset,
 			return -ENOMEM;
 		}
 	}
-	return retval;
+	return ret_value;
 }
 
 int s_releasedir(const char *path, struct fuse_file_info *fi)
@@ -261,17 +261,35 @@ int s_create(const char *path, mode_t mode, struct fuse_file_info *fi)
 		dispLog(PERSDATA, "Warning: s_mknod on \"%s\" with mode 0%o\n", path, mode);
 		return -EPERM;
 	}
-	int retval = sMkFile(lPath, (mode & 0x1FF) | 0x8000);
-	if (retval == -EEXIST)
+	int ret_value = sMkFile(lPath, (mode & 0x1FF) | 0x8000);
+	if (ret_value == -EEXIST)
 		return sOpen(lPath, O_WRONLY | O_TRUNC, fi->fh);
-	if (retval < 0)
-		return retval;
+	if (ret_value < 0)
+		return ret_value;
 	return sOpen(lPath, O_WRONLY, fi->fh);
 }
 
 int s_ftruncate(const char *path, off_t offset, struct fuse_file_info *fi)
 {
 	return sFTruncate(fi->fh, offset);
+}
+
+int s_fgetattr(const char *path, struct stat *statbuf, struct fuse_file_info *fi)
+{
+	sAttr result;
+	int ret_value;
+	if ((ret_value = sFGetAttr(fi->fh, result)) < 0)
+		return ret_value;
+	PersistentData *data = PERSDATA;
+	*statbuf = data->def_stat;
+	statbuf->st_mode = result.st_mode;
+	statbuf->st_nlink = result.st_nlink;
+	statbuf->st_size = (result.st_mode & 0x4000) ? 0x1000 : result.st_size;
+	statbuf->st_blocks = (statbuf->st_size + 0x01FF) >> 9; // really useful ???
+	statbuf->st_atim.tv_sec = result.st_atime;
+	statbuf->st_mtim.tv_sec = result.st_mtime;
+	statbuf->st_ctim.tv_sec = result.st_mtime;
+	return 0;
 }
 
 // TODO: Add unimplemented methods

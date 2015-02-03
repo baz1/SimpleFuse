@@ -89,3 +89,6 @@ int sAccess(const lString &addr, int mode);
 /* Change the size of an open file */
 int sFTruncate(int fd, off_t newsize);
 
+/* Get open file attributes */
+int sFGetAttr(int fd, sAttr &attr);
+

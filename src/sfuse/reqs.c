@@ -16,6 +16,7 @@ lString toLString(char *str)
 
 int sGetAttr(const lString &addr, sAttr &attr)
 {
+	// Get the file attributes of {addr} into {attr}
 	// On success, return 0.
 	// Else, -error_number where error_number is:
 	//  EFAULT: Bad address.
@@ -273,6 +274,16 @@ int sFTruncate(int fd, off_t newsize)
 	// On success, return 0.
 	// Else, -error_number where error_number is:
 	//  EBADF: {fd} is not a valid file descriptor opened for writing.
+	// TODO
+	return 0;
+}
+
+int sFGetAttr(int fd, sAttr &attr)
+{
+	// Get the file attributes of {addr} into {attr}
+	// On success, return 0.
+	// Else, -error_number where error_number is:
+	//  EBADF: {fd} is not a valid file descriptor.
 	// TODO
 	return 0;
 }
