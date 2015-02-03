@@ -4,8 +4,18 @@
  * See LICENSE for licensing details.
  */
 
+#ifndef __REQS_H__
+#define __REQS_H__
+
 #include <string.h>
 #include <errno.h>
+
+/* Is FUSE using concurrency? (1 is safer, 0 is quicker) */
+#define CONCURRENCY 0
+
+#if CONCURRENCY
+#include <pthread.h>
+#endif /* CONCURRENCY */
 
 #define STR_LEN_MAX 255
 
@@ -28,6 +38,9 @@ typedef struct PersistentData_struct
 {
 	struct stat def_stat;
 	FILE *log_file;
+#if CONCURRENCY
+	pthread_mutex_t my_mutex;
+#endif /* CONCURRENCY */
 } PersistentData;
 
 #define PERSDATA ((PersistentData*) fuse_get_context()->private_data)
@@ -91,4 +104,6 @@ int sFTruncate(int fd, off_t newsize);
 
 /* Get open file attributes */
 int sFGetAttr(int fd, sAttr &attr);
+
+#endif /* Not __REQS_H__ */
 
