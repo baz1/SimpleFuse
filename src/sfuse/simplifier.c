@@ -233,6 +233,16 @@ void *s_init(struct fuse_conn_info *conn)
 	return PERSDATA;
 }
 
+void s_destroy(void *userdata)
+{
+	PersistentData *data = PERSDATA;
+	if (data->log_file)
+	{
+		fclose(data->log_file);
+		data->log_file = 0;
+	}
+}
+
 // TODO: Add unimplemented methods
 
 struct fuse_operations s_oper = {
