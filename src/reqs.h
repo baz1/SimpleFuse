@@ -29,7 +29,7 @@ struct sAttr
 
 struct PersistentData
 {
-	struct stat def_stat;
+	stat def_stat;
 	FILE *log_file;
 };
 

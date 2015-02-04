@@ -19,7 +19,7 @@
 
 #define dispLog(...) fprintf(stderr, __VA_ARGS__);
 
-int s_getattr(const char *path, struct stat *statbuf)
+int s_getattr(const char *path, stat *statbuf)
 {
 	lString lPath = toLString(path);
 	if (lPath.str_len > STR_LEN_MAX)
@@ -133,7 +133,7 @@ int s_truncate(const char *path, off_t newsize)
 	return sTruncate(lPath, newsize);
 }
 
-int s_utime(const char *path, struct utimbuf *ubuf)
+int s_utime(const char *path, utimbuf *ubuf)
 {
 	lString lPath = toLString(path);
 	if (lPath.str_len > STR_LEN_MAX)
@@ -150,7 +150,7 @@ int s_utime(const char *path, struct utimbuf *ubuf)
 	return sUTime(lPath, st_atime, st_mtime);
 }
 
-int s_open(const char *path, struct fuse_file_info *fi)
+int s_open(const char *path, fuse_file_info *fi)
 {
 	if (fi->flags & (O_ASYNC | O_DIRECTORY | O_TMPFILE | O_CREAT | O_EXCL | O_TRUNC | O_PATH))
 	{
@@ -164,38 +164,38 @@ int s_open(const char *path, struct fuse_file_info *fi)
 	return sOpen(lPath, fi->flags, fi->fh);
 }
 
-int s_read(const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fi)
+int s_read(const char *path, char *buf, size_t size, off_t offset, fuse_file_info *fi)
 {
 	if (size > INT_MAX)
 		return -EINVAL;
 	return sRead(fi->fh, buf, (int) size, offset);
 }
 
-int s_write(const char *path, const char *buf, size_t size, off_t offset, struct fuse_file_info *fi)
+int s_write(const char *path, const char *buf, size_t size, off_t offset, fuse_file_info *fi)
 {
 	if (size > INT_MAX)
 		return -EINVAL;
 	return sWrite(fi->fh, buf, (int) size, offset);
 }
 
-int s_flush(const char *path, struct fuse_file_info *fi)
+int s_flush(const char *path, fuse_file_info *fi)
 {
 	// I did not really get the difference with a normal sync, but let's do the same action.
 	return sSync(fi->fh);
 }
 
-int s_release(const char *path, struct fuse_file_info *fi)
+int s_release(const char *path, fuse_file_info *fi)
 {
 	return sClose(fi->fh);
 }
 
-int s_fsync(const char *path, int datasync, struct fuse_file_info *fi)
+int s_fsync(const char *path, int datasync, fuse_file_info *fi)
 {
 	// We do not care about meta data being flushed here.
 	return sSync(fi->fh);
 }
 
-int s_opendir(const char *path, struct fuse_file_info *fi)
+int s_opendir(const char *path, fuse_file_info *fi)
 {
 	lString lPath = toLString(path);
 	if (lPath.str_len > STR_LEN_MAX)
@@ -204,7 +204,7 @@ int s_opendir(const char *path, struct fuse_file_info *fi)
 }
 
 int s_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offset,
-	struct fuse_file_info *fi)
+	fuse_file_info *fi)
 {
 	int ret_value;
 	char *name;
@@ -219,17 +219,17 @@ int s_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offset,
 	return ret_value;
 }
 
-int s_releasedir(const char *path, struct fuse_file_info *fi)
+int s_releasedir(const char *path, fuse_file_info *fi)
 {
 	return sCloseDir(fi->fh);
 }
 
-int s_fsyncdir(const char *path, int datasync, struct fuse_file_info *fi)
+int s_fsyncdir(const char *path, int datasync, fuse_file_info *fi)
 {
 	return 0; // Directories should always be directly synchronized.
 }
 
-void *s_init(struct fuse_conn_info *conn)
+void *s_init(fuse_conn_info *conn)
 {
 	return PERSDATA;
 }
@@ -252,7 +252,7 @@ int s_access(const char *path, int mask)
 	return sAccess(lPath, mask);
 }
 
-int s_create(const char *path, mode_t mode, struct fuse_file_info *fi)
+int s_create(const char *path, mode_t mode, fuse_file_info *fi)
 {
 	lString lPath = toLString(path);
 	if (lPath.str_len > STR_LEN_MAX)
@@ -270,12 +270,12 @@ int s_create(const char *path, mode_t mode, struct fuse_file_info *fi)
 	return sOpen(lPath, O_WRONLY, fi->fh);
 }
 
-int s_ftruncate(const char *path, off_t offset, struct fuse_file_info *fi)
+int s_ftruncate(const char *path, off_t offset, fuse_file_info *fi)
 {
 	return sFTruncate(fi->fh, offset);
 }
 
-int s_fgetattr(const char *path, struct stat *statbuf, struct fuse_file_info *fi)
+int s_fgetattr(const char *path, stat *statbuf, fuse_file_info *fi)
 {
 	sAttr result;
 	int ret_value;
@@ -293,7 +293,7 @@ int s_fgetattr(const char *path, struct stat *statbuf, struct fuse_file_info *fi
 	return 0;
 }
 
-struct fuse_operations s_oper = {
+fuse_operations s_oper = {
 	.getattr = s_getattr,
 	.readlink = NULL,
 	.getdir = NULL,
@@ -339,4 +339,9 @@ struct fuse_operations s_oper = {
 	.flock = NULL,
 	.fallocate = NULL
 };
+
+fuse_operations *getSimplifiedFuseOperations()
+{
+	return &s_oper;
+}
 

@@ -12,6 +12,7 @@ This limitation is nonetheless not so bad, since we don't usually need those fea
 Also, although symbolic links are disabled, hard links are possible.
 
 In addition to this reduction of features, the simplification of the process also comes from the type of programming interface that is provided.
+This programming interface is designed to be integrated into a Qt program.
 
 ## Instructions
 
