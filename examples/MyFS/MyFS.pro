@@ -8,6 +8,9 @@ QT       += core gui
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
+DEFINES += "_FILE_OFFSET_BITS=64"
+LIBS += -lfuse
+
 TARGET = MyFS
 TEMPLATE = app
 

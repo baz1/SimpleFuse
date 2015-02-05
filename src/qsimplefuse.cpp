@@ -1,6 +1,8 @@
 #include "qsimplefuse.h"
 
 #include <stdio.h>
+#define FUSE_USE_VERSION 26
+#include <fuse.h>
 
 QSimpleFuse::QSimpleFuse(QString mountPoint)
 {
