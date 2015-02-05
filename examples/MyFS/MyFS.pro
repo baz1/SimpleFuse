@@ -13,8 +13,12 @@ TEMPLATE = app
 
 
 SOURCES += main.cpp\
-        mainwindow.cpp
+        mainwindow.cpp \
+    sfuse/reqs.cpp \
+    sfuse/simplifier.cpp
 
-HEADERS  += mainwindow.h
+HEADERS  += mainwindow.h \
+    sfuse/reqs.h \
+    sfuse/simplifier.h
 
 FORMS    += mainwindow.ui
