@@ -78,6 +78,17 @@ QSimpleFuse::QSimpleFuse(QString mountPoint, bool singlethreaded)
     argv[1] = getCStrFromQStr(mountPoint);
     if (singlethreaded)
         argv[2] = getCStrFromQStr("-s");
+    /* Parsing arguments */
+    struct fuse_args args = FUSE_ARGS_INIT(argc, argv);
+    int res = fuse_parse_cmdline(&args, &fs.mountpoint, &fs.multithreaded, &fs.foreground);
+    if (res == -1)
+    {
+#ifndef QT_NO_DEBUG
+        fprintf(stderr, "QSimpleFuse: Error on fuse_parse_cmdline.\n");
+#endif
+        is_ok = false;
+        return;
+    }
     // TODO
     is_ok = true;
 }
