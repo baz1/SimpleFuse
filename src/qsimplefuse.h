@@ -3,11 +3,15 @@
 
 #include <QString>
 
+#define QSF_STATUS_OK     true
+#define QSF_STATUS_ERROR  false
+
 class QSimpleFuse
 {
 public:
     explicit QSimpleFuse(QString mountPoint);
     ~QSimpleFuse();
+    bool checkStatus();
 private:
     bool is_ok;
 private:

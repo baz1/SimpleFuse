@@ -15,3 +15,8 @@ QSimpleFuse::QSimpleFuse(QString mountPoint)
     }
     is_ok = true;
 }
+
+bool QSimpleFuse::checkStatus()
+{
+    return is_ok;
+}
