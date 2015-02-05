@@ -16,7 +16,16 @@
 #include <limits.h>
 #include <qglobal.h>
 
-#include "reqs.h"
+#include "simplifier.h"
+#include "qsimplefuse.h"
+
+lString toLString(const char *str)
+{
+    lString result;
+    result.str_value = str;
+    result.str_len = strlen(str);
+    return result;
+}
 
 #define dispLog(...) fprintf(stderr, __VA_ARGS__);
 
@@ -27,7 +36,7 @@ int s_getattr(const char *path, struct stat *statbuf)
         return -ENAMETOOLONG;
     sAttr result;
     int ret_value;
-    if ((ret_value = sGetAttr(lPath, result)) < 0)
+    if ((ret_value = (QSimpleFuse::_instance)->sGetAttr(lPath, result)) < 0)
         return ret_value;
     PersistentData *data = PERSDATA;
     *statbuf = data->def_stat;
@@ -52,7 +61,7 @@ int s_mknod(const char *path, mode_t mode, dev_t dev)
         dispLog("Warning: s_mknod on \"%s\" with mode 0%o\n", path, mode);
         return -EPERM;
     }
-    return sMkFile(lPath, mode);
+    return (QSimpleFuse::_instance)->sMkFile(lPath, mode);
 }
 
 int s_mkdir(const char *path, mode_t mode)
@@ -65,7 +74,7 @@ int s_mkdir(const char *path, mode_t mode)
         dispLog("Warning: s_mkdir on \"%s\" with mode 0%o\n", path, mode);
         return -EPERM;
     }
-    return sMkFile(lPath, mode);
+    return (QSimpleFuse::_instance)->sMkFile(lPath, mode);
 }
 
 int s_unlink(const char *path)
@@ -73,7 +82,7 @@ int s_unlink(const char *path)
     lString lPath = toLString(path);
     if (lPath.str_len > STR_LEN_MAX)
         return -ENAMETOOLONG;
-    return sRmFile(lPath, false);
+    return (QSimpleFuse::_instance)->sRmFile(lPath, false);
 }
 
 int s_rmdir(const char *path)
@@ -81,7 +90,7 @@ int s_rmdir(const char *path)
     lString lPath = toLString(path);
     if (lPath.str_len > STR_LEN_MAX)
         return -ENAMETOOLONG;
-    return sRmFile(lPath, true);
+    return (QSimpleFuse::_instance)->sRmFile(lPath, true);
 }
 
 int s_rename(const char *path, const char *newpath)
@@ -92,7 +101,7 @@ int s_rename(const char *path, const char *newpath)
     lString lPathTo = toLString(newpath);
     if (lPathTo.str_len > STR_LEN_MAX)
         return -ENAMETOOLONG;
-    return sMvFile(lPathFrom, lPathTo);
+    return (QSimpleFuse::_instance)->sMvFile(lPathFrom, lPathTo);
 }
 
 int s_link(const char *path, const char *newpath)
@@ -103,7 +112,7 @@ int s_link(const char *path, const char *newpath)
     lString lPathTo = toLString(path);
     if (lPathTo.str_len > STR_LEN_MAX)
         return -ENAMETOOLONG;
-    return sLink(lPathFrom, lPathTo);
+    return (QSimpleFuse::_instance)->sLink(lPathFrom, lPathTo);
 }
 
 int s_chmod(const char *path, mode_t mode)
@@ -116,7 +125,7 @@ int s_chmod(const char *path, mode_t mode)
     lString lPath = toLString(path);
     if (lPath.str_len > STR_LEN_MAX)
         return -ENAMETOOLONG;
-    return sChMod(lPath, mode);
+    return (QSimpleFuse::_instance)->sChMod(lPath, mode);
 }
 
 int s_chown(const char *path, uid_t uid, gid_t gid)
@@ -132,7 +141,7 @@ int s_truncate(const char *path, off_t newsize)
     lString lPath = toLString(path);
     if (lPath.str_len > STR_LEN_MAX)
         return -ENAMETOOLONG;
-    return sTruncate(lPath, newsize);
+    return (QSimpleFuse::_instance)->sTruncate(lPath, newsize);
 }
 
 int s_utime(const char *path, utimbuf *ubuf)
@@ -149,7 +158,7 @@ int s_utime(const char *path, utimbuf *ubuf)
         time(&mst_atime);
         mst_mtime = mst_atime;
     }
-    return sUTime(lPath, mst_atime, mst_mtime);
+    return (QSimpleFuse::_instance)->sUTime(lPath, mst_atime, mst_mtime);
 }
 
 int s_open(const char *path, fuse_file_info *fi)
@@ -164,7 +173,7 @@ int s_open(const char *path, fuse_file_info *fi)
     if (lPath.str_len > STR_LEN_MAX)
         return -ENAMETOOLONG;
     int fhv = 0;
-    int ret_value = sOpen(lPath, fi->flags, fhv);
+    int ret_value = (QSimpleFuse::_instance)->sOpen(lPath, fi->flags, fhv);
     fi->fh = (uint64_t) fhv;
     return ret_value;
 }
@@ -174,7 +183,7 @@ int s_read(const char *path, char *buf, size_t size, off_t offset, fuse_file_inf
     Q_UNUSED(path);
     if (size > INT_MAX)
         return -EINVAL;
-    return sRead(fi->fh, buf, (int) size, offset);
+    return (QSimpleFuse::_instance)->sRead(fi->fh, buf, (int) size, offset);
 }
 
 int s_write(const char *path, const char *buf, size_t size, off_t offset, fuse_file_info *fi)
@@ -182,20 +191,20 @@ int s_write(const char *path, const char *buf, size_t size, off_t offset, fuse_f
     Q_UNUSED(path);
     if (size > INT_MAX)
         return -EINVAL;
-    return sWrite(fi->fh, buf, (int) size, offset);
+    return (QSimpleFuse::_instance)->sWrite(fi->fh, buf, (int) size, offset);
 }
 
 int s_flush(const char *path, fuse_file_info *fi)
 {
     Q_UNUSED(path);
     // I did not really get the difference with a normal sync, but let's do the same action.
-    return sSync(fi->fh);
+    return (QSimpleFuse::_instance)->sSync(fi->fh);
 }
 
 int s_release(const char *path, fuse_file_info *fi)
 {
     Q_UNUSED(path);
-    return sClose(fi->fh);
+    return (QSimpleFuse::_instance)->sClose(fi->fh);
 }
 
 int s_fsync(const char *path, int datasync, fuse_file_info *fi)
@@ -203,7 +212,7 @@ int s_fsync(const char *path, int datasync, fuse_file_info *fi)
     Q_UNUSED(path);
     // We do not care about meta data being flushed here.
     Q_UNUSED(datasync);
-    return sSync(fi->fh);
+    return (QSimpleFuse::_instance)->sSync(fi->fh);
 }
 
 int s_opendir(const char *path, fuse_file_info *fi)
@@ -212,7 +221,7 @@ int s_opendir(const char *path, fuse_file_info *fi)
     if (lPath.str_len > STR_LEN_MAX)
         return -ENAMETOOLONG;
     int fhv = 0;
-    int ret_value = sOpenDir(lPath, fhv);
+    int ret_value = (QSimpleFuse::_instance)->sOpenDir(lPath, fhv);
     fi->fh = (uint64_t) fhv;
     return ret_value;
 }
@@ -224,7 +233,7 @@ int s_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offset,
     Q_UNUSED(offset);
     int ret_value;
     char *name;
-    while (((ret_value = sReadDir(fi->fh, name)) == 0) && name)
+    while (((ret_value = (QSimpleFuse::_instance)->sReadDir(fi->fh, name)) == 0) && name)
     {
         if (filler(buf, name, NULL, 0) != 0)
         {
@@ -238,7 +247,7 @@ int s_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offset,
 int s_releasedir(const char *path, fuse_file_info *fi)
 {
     Q_UNUSED(path);
-    return sCloseDir(fi->fh);
+    return (QSimpleFuse::_instance)->sCloseDir(fi->fh);
 }
 
 int s_fsyncdir(const char *path, int datasync, fuse_file_info *fi)
@@ -252,12 +261,14 @@ int s_fsyncdir(const char *path, int datasync, fuse_file_info *fi)
 void *s_init(fuse_conn_info *conn)
 {
     Q_UNUSED(conn);
+    (QSimpleFuse::_instance)->sInit();
     return PERSDATA;
 }
 
 void s_destroy(void *userdata)
 {
     Q_UNUSED(userdata);
+    (QSimpleFuse::_instance)->sDestroy();
 }
 
 int s_access(const char *path, int mask)
@@ -265,7 +276,7 @@ int s_access(const char *path, int mask)
     lString lPath = toLString(path);
     if (lPath.str_len > STR_LEN_MAX)
         return -ENAMETOOLONG;
-    return sAccess(lPath, mask);
+    return (QSimpleFuse::_instance)->sAccess(lPath, mask);
 }
 
 int s_create(const char *path, mode_t mode, fuse_file_info *fi)
@@ -278,16 +289,16 @@ int s_create(const char *path, mode_t mode, fuse_file_info *fi)
         dispLog("Warning: s_mknod on \"%s\" with mode 0%o\n", path, mode);
         return -EPERM;
     }
-    int ret_value = sMkFile(lPath, (mode & 0x1FF) | 0x8000), fhv = 0;
+    int ret_value = (QSimpleFuse::_instance)->sMkFile(lPath, (mode & 0x1FF) | 0x8000), fhv = 0;
     if (ret_value == -EEXIST)
     {
-        ret_value = sOpen(lPath, O_WRONLY | O_TRUNC, fhv);
+        ret_value = (QSimpleFuse::_instance)->sOpen(lPath, O_WRONLY | O_TRUNC, fhv);
         fi->fh = (uint64_t) fhv;
         return ret_value;
     }
     if (ret_value < 0)
         return ret_value;
-    ret_value = sOpen(lPath, O_WRONLY, fhv);
+    ret_value = (QSimpleFuse::_instance)->sOpen(lPath, O_WRONLY, fhv);
     fi->fh = (uint64_t) fhv;
     return ret_value;
 }
@@ -295,7 +306,7 @@ int s_create(const char *path, mode_t mode, fuse_file_info *fi)
 int s_ftruncate(const char *path, off_t offset, fuse_file_info *fi)
 {
     Q_UNUSED(path);
-    return sFTruncate(fi->fh, offset);
+    return (QSimpleFuse::_instance)->sFTruncate(fi->fh, offset);
 }
 
 int s_fgetattr(const char *path, struct stat *statbuf, fuse_file_info *fi)
@@ -303,7 +314,7 @@ int s_fgetattr(const char *path, struct stat *statbuf, fuse_file_info *fi)
     Q_UNUSED(path);
     sAttr result;
     int ret_value;
-    if ((ret_value = sFGetAttr(fi->fh, result)) < 0)
+    if ((ret_value = (QSimpleFuse::_instance)->sFGetAttr(fi->fh, result)) < 0)
         return ret_value;
     PersistentData *data = PERSDATA;
     *statbuf = data->def_stat;
