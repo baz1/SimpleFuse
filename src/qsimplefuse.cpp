@@ -106,5 +106,5 @@ QSimpleFuse::~QSimpleFuse()
 
 bool QSimpleFuse::checkStatus()
 {
-    return is_ok;
+    return is_ok && (!fs.failed);
 }
