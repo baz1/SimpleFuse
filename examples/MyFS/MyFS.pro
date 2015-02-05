@@ -15,10 +15,12 @@ TEMPLATE = app
 SOURCES += main.cpp\
         mainwindow.cpp \
     sfuse/reqs.cpp \
-    sfuse/simplifier.cpp
+    sfuse/simplifier.cpp \
+    sfuse/qsimplefuse.cpp
 
 HEADERS  += mainwindow.h \
     sfuse/reqs.h \
-    sfuse/simplifier.h
+    sfuse/simplifier.h \
+    sfuse/qsimplefuse.h
 
 FORMS    += mainwindow.ui

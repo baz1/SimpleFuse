@@ -6,4 +6,3 @@ void makeSimplifiedFuseOperations();
 fuse_operations *getSimplifiedFuseOperations();
 
 #endif /* Not __SIMPLIFIER_H__ */
-

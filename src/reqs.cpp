@@ -286,4 +286,3 @@ int sFGetAttr(int fd, sAttr &attr)
     // TODO
     return -ENOSYS;
 }
-

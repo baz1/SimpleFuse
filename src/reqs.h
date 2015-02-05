@@ -97,4 +97,3 @@ int sFTruncate(int fd, off_t newsize);
 int sFGetAttr(int fd, sAttr &attr);
 
 #endif /* Not __REQS_H__ */
-

@@ -355,4 +355,3 @@ fuse_operations *getSimplifiedFuseOperations()
 {
     return &s_oper;
 }
-
