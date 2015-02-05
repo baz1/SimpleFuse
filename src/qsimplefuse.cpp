@@ -6,7 +6,20 @@
  * Source inspired by the qt-fuse example by qknight (https://github.com/qknight/qt-fuse-example)
  */
 
+/*!
+    \class QSimpleFuse
+
+    \brief QSimpleFuse allows a simple use of FUSE.
+
+    \warning You need to add the following lines to your .pro file:
+
+    DEFINES += "_FILE_OFFSET_BITS=64"
+
+    LIBS += -lfuse
+*/
+
 #include "qsimplefuse.h"
+#include "simplifier.h"
 
 #include <string.h>
 #include <QCoreApplication>
@@ -66,6 +79,14 @@ char *getCStrFromQStr(const QString &str)
     return result;
 }
 
+/*!
+    Constructs and initialize a new FUSE filesystem.
+
+    This filesystem is mounted at \a mountPoint.
+    If \a singlethreaded is \c true, it will not be multithreaded.
+
+    \warning Only one single instance at a time can be created / used.
+*/
 QSimpleFuse::QSimpleFuse(QString mountPoint, bool singlethreaded)
 {
     /* Check whether or not this is a new instance */
@@ -132,6 +153,9 @@ cancelmount:
     is_ok = false;
 }
 
+/*!
+    Destructs the object and unmount the filesystem.
+*/
 QSimpleFuse::~QSimpleFuse()
 {
     if (is_ok)
@@ -155,6 +179,10 @@ QSimpleFuse::~QSimpleFuse()
     }
 }
 
+/*!
+    Returns \c true if the initialization and mount have been successful,
+    \c false otherwise.
+*/
 bool QSimpleFuse::checkStatus()
 {
     return is_ok && (!fs.failed);
