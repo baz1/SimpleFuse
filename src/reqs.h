@@ -9,40 +9,41 @@
 
 #include <string.h>
 #include <errno.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 
 #define STR_LEN_MAX 255
 
 struct lString
 {
-	char *str_value;
-	size_t str_len;
+    const char *str_value;
+    size_t str_len;
 };
 
 struct sAttr
 {
-	mode_t st_mode; // (0x4000 if directory, 0x8000 if file) + file permissions (9 lowest bits, owner-read is highest, others-execute is lowest)
-	nlink_t st_nlink; // number of hard links
-	off_t st_size; // size if file
-	time_t st_atime; // Last access time
-	time_t st_mtime; // Last modification time
+    mode_t    mst_mode;  // (0x4000 if directory, 0x8000 if file) + file permissions (9 lowest bits, owner-read is highest, others-execute is lowest)
+    nlink_t   mst_nlink; // number of hard links
+    off_t     mst_size;  // size if file
+    time_t    mst_atime; // Last access time
+    time_t    mst_mtime; // Last modification time
 };
 
 struct PersistentData
 {
-	stat def_stat;
-	FILE *log_file;
+    struct stat def_stat;
 };
 
 #define PERSDATA ((PersistentData*) fuse_get_context()->private_data) // TODO change
 
 /* Convert a C string into a lString (which contains the string length) */
-lString toLString(char *str);
+lString toLString(const char *str);
 
 /* Get file attributes */
 int sGetAttr(const lString &addr, sAttr &attr);
 
 /* Create a file */
-int sMkFile(const lString &addr, mode_t st_mode);
+int sMkFile(const lString &addr, mode_t mst_mode);
 
 /* Remove a file */
 int sRmFile(const lString &addr, bool isDir);
@@ -54,13 +55,13 @@ int sMvFile(const lString &addrFrom, const lString &addrTo);
 int sLink(const lString &addrFrom, const lString &addrTo);
 
 /* Change file permissions */
-int sChMod(const lString &addr, mode_t st_mode);
+int sChMod(const lString &addr, mode_t mst_mode);
 
 /* Change the size of a file */
 int sTruncate(const lString &addr, off_t newsize);
 
 /* Change last modification/access time of a file */
-int sUTime(const lString &addr, time_t st_atime, time_t st_mtime);
+int sUTime(const lString &addr, time_t mst_atime, time_t mst_mtime);
 
 /* Open a file */
 int sOpen(const lString &addr, int flags, int &fd);
