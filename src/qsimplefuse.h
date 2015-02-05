@@ -1,3 +1,9 @@
+/*
+ * Copyright (c) 2015, Rémi Bazin <bazin.remi@gmail.com>
+ * All rights reserved.
+ * See LICENSE for licensing details.
+ */
+
 #ifndef __QSIMPLEFUSE_H__
 #define __QSIMPLEFUSE_H__
 
