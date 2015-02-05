@@ -48,7 +48,16 @@ static void *fuse_thread(void *arg)
 
 QSimpleFuse * volatile QSimpleFuse::_instance = NULL;
 
-QSimpleFuse::QSimpleFuse(QString mountPoint)
+char *getCStrFromQStr(const QString &str)
+{
+    QByteArray strData = str.toLocal8Bit();
+    char *result = new char[strData.length() + 1];
+    memcpy(result, strData.constData(), strData.length());
+    result[strData.length()] = 0;
+    return result;
+}
+
+QSimpleFuse::QSimpleFuse(QString mountPoint, bool singlethreaded)
 {
     /* Check whether or not this is a new instance */
     if (QSimpleFuse::_instance)
@@ -60,12 +69,28 @@ QSimpleFuse::QSimpleFuse(QString mountPoint)
         return;
     }
     QSimpleFuse::_instance = this;
+    /* Initialize fs */
+    memset(&fs, 0, sizeof(fs));
+    /* Recreating custom arguments */
+    argc = singlethreaded ? 3 : 2;
+    argv = new char*[argc];
+    argv[0] = getCStrFromQStr(QCoreApplication::arguments().first());
+    argv[1] = getCStrFromQStr(mountPoint);
+    if (singlethreaded)
+        argv[2] = getCStrFromQStr("-s");
     // TODO
     is_ok = true;
 }
 
 QSimpleFuse::~QSimpleFuse()
 {
+    if (argv)
+    {
+        for (int i = 0; i < argc; ++i)
+            delete[] argv[i];
+        delete[] argv;
+        argv = NULL;
+    }
 }
 
 bool QSimpleFuse::checkStatus()

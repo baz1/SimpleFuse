@@ -15,7 +15,7 @@
 class QSimpleFuse
 {
 public:
-    explicit QSimpleFuse(QString mountPoint);
+    explicit QSimpleFuse(QString mountPoint, bool singlethreaded = false);
     ~QSimpleFuse();
     bool checkStatus();
 private:
