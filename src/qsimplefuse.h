@@ -20,6 +20,8 @@ public:
     bool checkStatus();
 private:
     bool is_ok;
+    int argc;
+    char **argv;
 private:
     static QSimpleFuse * volatile _instance;
 };

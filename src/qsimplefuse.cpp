@@ -8,9 +8,18 @@
 
 #include "qsimplefuse.h"
 
-#include <stdio.h>
+#include <string.h>
+#include <QCoreApplication>
+#include <QStringList>
+
 #define FUSE_USE_VERSION 26
 #include <fuse.h>
+#include <fuse/fuse_lowlevel.h>
+
+
+#ifndef QT_NO_DEBUG
+#include <stdio.h>
+#endif
 
 static struct fuse_server {
     pthread_t pid;
@@ -89,12 +98,54 @@ QSimpleFuse::QSimpleFuse(QString mountPoint, bool singlethreaded)
         is_ok = false;
         return;
     }
-    // TODO
+    /* Mounting FS */
+    fs.ch = fuse_mount(fs.mountpoint, &args);
+    if (!fs.ch)
+    {
+#ifndef QT_NO_DEBUG
+        perror("fuse_mount");
+#endif
+        is_ok = false;
+        return;
+    }
+    makeSimplifiedFuseOperations();
+    fs.fuse = fuse_new(fs.ch, &args, getSimplifiedFuseOperations(), sizeof(fuse_operations), NULL);
+    fuse_opt_free_args(&args);
+    if (!fs.fuse)
+    {
+#ifndef QT_NO_DEBUG
+        perror("fuse_new");
+#endif
+        goto cancelmount;
+    }
+    if (pthread_create(&fs.pid, NULL, fuse_thread, NULL) != 0)
+    {
+#ifndef QT_NO_DEBUG
+        perror("pthread_create");
+#endif
+        goto cancelmount;
+    }
     is_ok = true;
+    return;
+cancelmount:
+    fuse_unmount(fs.mountpoint, fs.ch);
+    is_ok = false;
 }
 
 QSimpleFuse::~QSimpleFuse()
 {
+    if (is_ok)
+    {
+        /* Aborting FS */
+        fuse_session_exit(fuse_get_session(fs.fuse));
+        fuse_unmount(fs.mountpoint, fs.ch);
+        pthread_join(fs.pid, NULL);
+        fs.fuse = NULL;
+        /* Allow a future new instance */
+        if (_instance == this)
+            _instance = NULL;
+        is_ok = false;
+    }
     if (argv)
     {
         for (int i = 0; i < argc; ++i)
