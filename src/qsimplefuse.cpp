@@ -40,7 +40,10 @@
 #include <QStringList>
 #include <errno.h>
 
+#ifndef FUSE_USE_VERSION
 #define FUSE_USE_VERSION 26
+#endif
+
 #include <fuse.h>
 #include <fuse/fuse_lowlevel.h>
 

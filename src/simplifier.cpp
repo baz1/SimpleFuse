@@ -4,13 +4,10 @@
  * See LICENSE for licensing details.
  */
 
-#define FUSE_USE_VERSION 26
-
 #include <errno.h>
 #include <unistd.h>
 #include <string.h>
 #include <sys/types.h>
-#include <fuse.h>
 #include <stdio.h>
 #include <time.h>
 #include <limits.h>

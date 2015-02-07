@@ -102,7 +102,7 @@ private:
     bool is_ok;
     int argc;
     char **argv;
-private:
+public: /* Intended for private use only */
     static QSimpleFuse * volatile _instance;
 };
 
