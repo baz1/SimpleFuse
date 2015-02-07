@@ -1,6 +1,8 @@
 # Qt user configuration for a project
 *.user
 
-#Qt builds
+# Qt builds
 build-*/
 
+# Documentation
+/doc/

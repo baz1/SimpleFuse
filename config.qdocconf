@@ -1,0 +1,14 @@
+project = SimpleFuse
+description = Simplified Filesystem in User Space
+sources.fileextensions = "*.cpp *.qdoc"
+headers.fileextensions = "*.h"
+
+outputformats = HTML
+HTML.stylesheets = docstyle.css
+HTML.headerstyles = "<link rel=\"stylesheet\" type=\"text/css\" href=\"style/docstyle.css\" />"
+
+headerdirs = ./src
+
+sourcedirs = ./src
+
+outputdir = doc

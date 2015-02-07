@@ -8,6 +8,8 @@
 
 /*!
     \class QSimpleFuse
+    \inmodule SimpleFuse
+    \ingroup SimpleFuse
 
     \brief QSimpleFuse allows a simple use of FUSE.
 
