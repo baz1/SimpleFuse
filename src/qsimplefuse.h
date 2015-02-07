@@ -17,6 +17,9 @@ struct lString
     size_t str_len;
 };
 
+#define SF_MODE_DIRECTORY       0x4000
+#define SF_MODE_REGULARFILE     0x8000
+
 struct sAttr
 {
     mode_t    mst_mode;  // (0x4000 if directory, 0x8000 if file) + file permissions (9 lowest bits, owner-read is highest, others-execute is lowest)
@@ -25,12 +28,6 @@ struct sAttr
     time_t    mst_atime; // Last access time
     time_t    mst_mtime; // Last modification time
 };
-
-struct PersistentData
-{
-    struct stat def_stat;
-};
-
 
 class QSimpleFuse
 {
@@ -46,31 +43,31 @@ public:
     virtual void sDestroy();
 
     /* Get file attributes */
-    virtual int sGetAttr(const lString &addr, sAttr &attr);
+    virtual int sGetAttr(const lString &pathname, sAttr &attr);
 
     /* Create a file */
-    virtual int sMkFile(const lString &addr, mode_t mst_mode);
+    virtual int sMkFile(const lString &pathname, mode_t mst_mode);
 
     /* Remove a file */
-    virtual int sRmFile(const lString &addr, bool isDir);
+    virtual int sRmFile(const lString &pathname, bool isDir);
 
     /* Rename a file */
-    virtual int sMvFile(const lString &addrFrom, const lString &addrTo);
+    virtual int sMvFile(const lString &pathBefore, const lString &pathAfter);
 
     /* Make a link */
-    virtual int sLink(const lString &addrFrom, const lString &addrTo);
+    virtual int sLink(const lString &pathFrom, const lString &pathTo);
 
     /* Change file permissions */
-    virtual int sChMod(const lString &addr, mode_t mst_mode);
+    virtual int sChMod(const lString &pathname, mode_t mst_mode);
 
     /* Change the size of a file */
-    virtual int sTruncate(const lString &addr, off_t newsize);
+    virtual int sTruncate(const lString &pathname, off_t newsize);
 
     /* Change last modification/access time of a file */
-    virtual int sUTime(const lString &addr, time_t mst_atime, time_t mst_mtime);
+    virtual int sUTime(const lString &pathname, time_t mst_atime, time_t mst_mtime);
 
     /* Open a file */
-    virtual int sOpen(const lString &addr, int flags, int &fd);
+    virtual int sOpen(const lString &pathname, int flags, int &fd);
 
     /* Read open file */
     virtual int sRead(int fd, void *buf, int count, off_t offset);
@@ -85,7 +82,7 @@ public:
     virtual int sClose(int fd);
 
     /* Open a directory */
-    virtual int sOpenDir(const lString &addr, int &fd);
+    virtual int sOpenDir(const lString &pathname, int &fd);
 
     /* Read a directory entry */
     virtual int sReadDir(int fd, char *&name);
@@ -94,7 +91,7 @@ public:
     virtual int sCloseDir(int fd);
 
     /* Check access to a file */
-    virtual int sAccess(const lString &addr, int mode);
+    virtual int sAccess(const lString &pathname, int mode);
 
     /* Change the size of an open file */
     virtual int sFTruncate(int fd, off_t newsize);

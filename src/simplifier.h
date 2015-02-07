@@ -3,6 +3,11 @@
 
 #define STR_LEN_MAX 255
 
+struct PersistentData
+{
+    struct stat def_stat;
+};
+
 #define PERSDATA ((PersistentData*) fuse_get_context()->private_data)
 
 void makeSimplifiedFuseOperations();
