@@ -6,7 +6,11 @@
 class MyFS : public QSimpleFuse
 {
 public:
-    MyFS(QString mountPoint);
+    MyFS(QString mountPoint, QString filename);
+    ~MyFS();
+    void sInit();
+private:
+    char *filename;
 };
 
 #endif // MYFS_H

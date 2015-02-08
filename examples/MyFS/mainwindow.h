@@ -22,6 +22,8 @@ private slots:
     void on_dirChange_pressed();
     void on_sfMount_pressed();
     void on_fileload_pressed();
+    void on_sfUMount_pressed();
+    void on_filenew_pressed();
 private:
     Ui::MainWindow *ui;
     QString mountDir, filename;

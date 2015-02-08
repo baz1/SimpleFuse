@@ -33,18 +33,17 @@ void MainWindow::umount()
     delete fs;
     fs = NULL;
     ui->sfUMount->setEnabled(false);
+    ui->fileBox->setEnabled(true);
+    ui->dirBox->setEnabled(true);
     ui->sfMount->setEnabled(true);
 }
 
 void MainWindow::on_dirChange_pressed()
 {
+    ui->dirstatus->setText(tr("Not set."));
     mountDir = QFileDialog::getExistingDirectory(this, tr("Choose your mount point:"));
-    if (mountDir.isEmpty())
-    {
-        ui->dirstatus->setText(tr("Not set."));
-    } else {
+    if (!mountDir.isEmpty())
         ui->dirstatus->setText(mountDir);
-    }
 }
 
 void MainWindow::on_sfMount_pressed()
@@ -66,16 +65,38 @@ void MainWindow::on_sfMount_pressed()
         QMessageBox::warning(this, tr("Error"), tr("You have to specify a container file before!"));
         return;
     }
-    // TODO
+    /* One can delete the file afterwards, but since this is only an example, we will just do one more check */
+    if (!QFile::exists(filename))
+    {
+        QMessageBox::warning(this, tr("Error"), tr("The container file does not exist anymore!"));
+        return;
+    }
+    fs = new MyFS(mountDir, filename);
+    ui->sfMount->setEnabled(false);
+    ui->fileBox->setEnabled(false);
+    ui->dirBox->setEnabled(false);
+    ui->sfUMount->setEnabled(true);
 }
 
 void MainWindow::on_fileload_pressed()
 {
+    ui->filestatus->setText(tr("Not set."));
     filename = QFileDialog::getOpenFileName(this, tr("Select the container file:"), QString(), tr("Container files (*.sfexample)"));
-    if (filename.isEmpty())
-    {
-        ui->filestatus->setText(tr("Not set."));
-    } else {
+    if (!filename.isEmpty())
         ui->filestatus->setText(filename);
-    }
+}
+
+void MainWindow::on_sfUMount_pressed()
+{
+    umount();
+}
+
+void MainWindow::on_filenew_pressed()
+{
+    ui->filestatus->setText(tr("Not set."));
+    filename = QFileDialog::getSaveFileName(this, tr("Choose a new container file:"), QString(), tr("Container files (*.sfexample)"));
+    if (filename.isEmpty())
+        return;
+    // TODO create the file for an empty filesystem.
+    ui->filestatus->setText(filename);
 }
