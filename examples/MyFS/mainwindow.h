@@ -3,6 +3,8 @@
 
 #include <QMainWindow>
 
+class MyFS;
+
 namespace Ui
 {
     class MainWindow;
@@ -14,14 +16,16 @@ class MainWindow : public QMainWindow
 public:
     explicit MainWindow(QWidget *parent = 0);
     ~MainWindow();
+private:
+    void umount();
 private slots:
     void on_dirChange_pressed();
-
     void on_sfMount_pressed();
-
+    void on_fileload_pressed();
 private:
     Ui::MainWindow *ui;
-    QString mountDir;
+    QString mountDir, filename;
+    MyFS *fs;
 };
 
 #endif // MAINWINDOW_H

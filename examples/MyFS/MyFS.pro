@@ -18,10 +18,12 @@ TEMPLATE = app
 SOURCES += main.cpp\
         mainwindow.cpp \
     sfuse/simplifier.cpp \
-    sfuse/qsimplefuse.cpp
+    sfuse/qsimplefuse.cpp \
+    myfs.cpp
 
 HEADERS  += mainwindow.h \
     sfuse/simplifier.h \
-    sfuse/qsimplefuse.h
+    sfuse/qsimplefuse.h \
+    myfs.h
 
 FORMS    += mainwindow.ui

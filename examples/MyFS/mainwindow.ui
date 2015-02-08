@@ -24,7 +24,7 @@
        <item>
         <widget class="QLabel" name="filestatus">
          <property name="text">
-          <string>Not loaded.</string>
+          <string>Not set.</string>
          </property>
         </widget>
        </item>
