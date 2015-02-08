@@ -131,6 +131,9 @@ int s_chmod(const char *path, mode_t mode)
 
 int s_chown(const char *path, uid_t uid, gid_t gid)
 {
+    Q_UNUSED(path);
+    Q_UNUSED(uid);
+    Q_UNUSED(gid);
     dispLog("Warning: Entered s_chown with \"%s\" --> %d:%d\n", path, uid, gid);
     return -EPERM;
 }
