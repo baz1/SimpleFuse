@@ -2,7 +2,7 @@ QDOC=qdoc
 
 all: doc
 
-doc: src/qsimplefuse.h src/qsimplefuse.cpp config.qdocconf docstyle.css
+doc: src/* config.qdocconf
 	$(QDOC) config.qdocconf
 
 clean:
