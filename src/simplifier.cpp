@@ -24,7 +24,11 @@ lString toLString(const char *str)
     return result;
 }
 
+#ifndef QT_NO_DEBUG
 #define dispLog(...) fprintf(stderr, __VA_ARGS__);
+#else
+#define dispLog(...) /* NOP */
+#endif
 
 int s_getattr(const char *path, struct stat *statbuf)
 {
