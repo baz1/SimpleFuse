@@ -14,8 +14,14 @@ class MainWindow : public QMainWindow
 public:
     explicit MainWindow(QWidget *parent = 0);
     ~MainWindow();
+private slots:
+    void on_dirChange_pressed();
+
+    void on_sfMount_pressed();
+
 private:
     Ui::MainWindow *ui;
+    QString mountDir;
 };
 
 #endif // MAINWINDOW_H
