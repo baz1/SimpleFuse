@@ -72,6 +72,13 @@ void MainWindow::on_sfMount_pressed()
         return;
     }
     fs = new MyFS(mountDir, filename);
+    if (!fs->checkStatus())
+    {
+        delete fs;
+        fs = NULL;
+        QMessageBox::warning(this, tr("Error"), tr("The mount operation failed (enable debug option to see the details)."));
+        return;
+    }
     ui->sfMount->setEnabled(false);
     ui->fileBox->setEnabled(false);
     ui->dirBox->setEnabled(false);
@@ -97,6 +104,6 @@ void MainWindow::on_filenew_pressed()
     filename = QFileDialog::getSaveFileName(this, tr("Choose a new container file:"), QString(), tr("Container files (*.sfexample)"));
     if (filename.isEmpty())
         return;
-    // TODO create the file for an empty filesystem.
+    MyFS::createNewFilesystem(filename);
     ui->filestatus->setText(filename);
 }
