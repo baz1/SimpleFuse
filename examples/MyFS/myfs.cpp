@@ -415,6 +415,16 @@ ioerror:
     return -EIO;
 }
 
+int MyFS::sCloseDir(int fd)
+{
+    if ((fd >= openFiles.count()) || (!openFiles.at(fd).nodeAddr) || openFiles.at(fd).isRegular)
+        return -EBADF;
+    OpenFile *file = &openFiles[fd];
+    file->nodeAddr = 0;
+    while ((!openFiles.isEmpty()) && (!openFiles.last().nodeAddr))
+        openFiles.removeLast();
+}
+
 char *MyFS::convStr(const QString &str)
 {
     char *result = new char[str.length() + 1];
