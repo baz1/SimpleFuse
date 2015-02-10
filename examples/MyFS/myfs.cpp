@@ -50,6 +50,8 @@ void MyFS::createNewFilesystem(QString filename)
     if (write(fd, &addr, 4) != 4) goto abort;
     addr = htonl(DIR_BLOCK_SIZE);
     if (write(fd, &addr, 4) != 4) goto abort;
+    addr = 0;
+    if (write(fd, &addr, 4) != 4) goto abort;
     addr = htonl(time(0));
     if (write(fd, &addr, 4) != 4) goto abort;
     mshort = htons(2);
@@ -114,14 +116,13 @@ void MyFS::sDestroy()
 
 int MyFS::sGetAttr(const lString &pathname, sAttr &attr)
 {
-    fprintf(stderr, "Entered sGetAttr with %s\n", pathname.str_value);
     if (fd < 0) return -EIO;
     quint32 addr;
     lString shallowCopy = pathname;
     int ret_value = getAddress(shallowCopy, addr);
     if (ret_value != 0)
         return ret_value;
-    addr += 4;
+    addr += 8;
     if (lseek(fd, addr, SEEK_SET) != addr)
         return -EIO;
     if (read(fd, &addr, 4) != 4)
@@ -141,7 +142,6 @@ int MyFS::sGetAttr(const lString &pathname, sAttr &attr)
             return -EIO;
         attr.mst_size = (off_t) ntohl(addr);
     }
-    fprintf(stderr, "Out of sGetAttr\n");
     return 0;
 }
 
@@ -180,8 +180,12 @@ int MyFS::getAddress(lString &pathname, quint32 &result)
     if (ret_value != 0)
         return ret_value;
     /* Look for the last part of the pathname in the parent directory */
-    result += 10;
+    result += 4;
     if (lseek(fd, result, SEEK_SET) != result)
+        return -EIO;
+    if (read(fd, &result, 4) != 4)
+        return -EIO;
+    if (read(fd, &str_buffer, 6) != 6)
         return -EIO;
     quint16 mshort;
     if (read(fd, &mshort, 2) != 2)
@@ -197,7 +201,16 @@ int MyFS::getAddress(lString &pathname, quint32 &result)
         if (read(fd, &addr, 4) != 4)
             return -EIO;
         if (addr == 0)
-            return -ENOENT;
+        {
+            if (!result)
+                return -ENOENT;
+            result = ntohl(result) + 4;
+            if (lseek(fd, result, SEEK_SET) != result)
+                return -EIO;
+            if (read(fd, &result, 4) != 4)
+                return -EIO;
+            continue;
+        }
         unsigned char nameLen;
         if (read(fd, &nameLen, 1) != 1)
             return -EIO;

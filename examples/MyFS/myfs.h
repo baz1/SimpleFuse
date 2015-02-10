@@ -21,12 +21,13 @@
 
     FILE_BLOCK:
         Its size is followed by the following bytes:
-        4-7: Last modification time
-        8-9: Number of hard links
-        10-11: SF_MODE_DIRECTORY for directory, SF_MODE_REGULARFILE for file, plus access rights
+        4-7: Address of the next part of the file (or 0 if this is the last part)
+        8-11: Last modification time
+        12-13: Number of hard links
+        14-15: SF_MODE_DIRECTORY for directory, SF_MODE_REGULARFILE for file, plus access rights
 
         If this is a directory, for each entry:
-            * Address (4 bytes) (0 to end the list)
+            * Address (4 bytes) (0 to end the list, which might then be continued on the next part of this "directory file")
             * Name length (NULL terminating byte excluded) (1 byte)
             * Name (without the NULL terminating byte)
 
