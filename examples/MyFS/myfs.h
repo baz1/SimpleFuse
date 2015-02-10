@@ -26,14 +26,14 @@
         12-13: Number of hard links
         14-15: SF_MODE_DIRECTORY for directory, SF_MODE_REGULARFILE for file, plus access rights
 
-        If this is a directory, for each entry:
+        If this is a directory, for each entry: (starts here for next parts)
             * Address (4 bytes) (0 to end the list, which might then be continued on the next part of this "directory file")
             * Name length (NULL terminating byte excluded) (1 byte)
             * Name (without the NULL terminating byte)
 
         If this is a regular file:
             * The size of its data (4 bytes)
-            * Its data
+            * Its data (starts here for next parts)
 */
 
 class MyFS : public QSimpleFuse
@@ -45,8 +45,11 @@ public:
     void sInit();
     void sDestroy();
     int sGetAttr(const lString &pathname, sAttr &attr);
+    int sMkFile(const lString &pathname, mode_t mst_mode);
 private:
     static char *convStr(const QString &str);
+    int getBlock(quint32 size, quint32 &addr);
+    int freeBlock(quint32 addr);
     /* Warning: the following function does not preserve pathname (length changed) */
     int getAddress(lString &pathname, quint32 &result);
 private:
