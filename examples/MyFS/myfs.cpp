@@ -12,10 +12,12 @@
 
 #include <QByteArray>
 
-#define READONLY_FS 0
+#define READONLY_FS 1
 
 #define DIR_BLOCK_SIZE 0x400
 #define REG_BLOCK_SIZE 0x1000
+
+#define MAX_OPEN_FILES 1000
 
 static char str_buffer[0xFF];
 
@@ -246,6 +248,8 @@ int MyFS::sMkFile(const lString &pathname, mode_t mst_mode)
         addr = dirAddr + 12;
         if (lseek(fd, addr, SEEK_SET) != addr)
             return -EIO;
+        if (nlink == 0xFFFF)
+            return -EMLINK;
         if (write(fd, &(++nlink), 2) != 2)
             return -EIO;
         if (read(fd, &mshort, 2) != 2)
@@ -335,6 +339,36 @@ int MyFS::sMkFile(const lString &pathname, mode_t mst_mode)
 #endif /* READONLY_FS */
 }
 
+int MyFS::sOpenDir(const lString &pathname, int &fd)
+{
+    OpenFile myDir;
+    lString shallowCopy = pathname;
+    int ret_value = getAddress(shallowCopy, myDir.nodeAddr);
+    if (ret_value != 0)
+        return ret_value;
+    if (lseek(fd, myDir.nodeAddr + 4, SEEK_SET) != myDir.nodeAddr + 4)
+        return -EIO;
+    if (read(fd, &myDir.nextAddr, 4) != 4)
+        return -EIO;
+    if (read(fd, str_buffer, 6) != 6)
+        return -EIO;
+    quint16 mshort;
+    if (read(fd, &mshort, 4) != 4)
+        return -EIO;
+    mshort = ntohs(mshort);
+    if (mshort & SF_MODE_REGULARFILE)
+        return -ENOTDIR;
+    int i = 0;
+    while ((i < openFiles.count()) && openFiles.at(i).nodeAddr) ++i;
+    if ((i == openFiles.count()) && (i > MAX_OPEN_FILES))
+        return -ENFILE;
+    myDir.currentAddr = myDir.nodeAddr + 16;
+    myDir.nextAddr = ntohl(myDir.nextAddr);
+    myDir.partAddr = myDir.nodeAddr;
+    myDir.isRegular = false;
+    openFiles[i] = myDir;
+}
+
 char *MyFS::convStr(const QString &str)
 {
     char *result = new char[str.length() + 1];
@@ -348,7 +382,11 @@ char *MyFS::convStr(const QString &str)
     In this case, fd will point to the 9-th byte of that block at the end of the call. */
 int MyFS::getBlock(quint32 size, quint32 &addr)
 {
+#if READONLY_FS
+    return -EROFS;
+#else
     // TODO
+#endif /* READONLY_FS */
 }
 
 /* Frees the block at address addr and returns 0 on success. */

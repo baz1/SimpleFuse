@@ -36,6 +36,16 @@
             * Its data (starts here for next parts)
 */
 
+struct OpenFile
+{
+    quint32 nodeAddr;
+    quint32 partAddr;
+    quint32 nextAddr;
+    quint32 currentAddr;
+    quint32 partOffset; /* Only used in regular files */
+    bool isRegular;
+};
+
 class MyFS : public QSimpleFuse
 {
 public:
@@ -46,6 +56,7 @@ public:
     void sDestroy();
     int sGetAttr(const lString &pathname, sAttr &attr);
     int sMkFile(const lString &pathname, mode_t mst_mode);
+    int sOpenDir(const lString &pathname, int &fd);
 private:
     static char *convStr(const QString &str);
     int getBlock(quint32 size, quint32 &addr);
@@ -57,6 +68,7 @@ private:
     int fd;
     quint32 root_address, first_blank;
     QHash<QString, quint32> cache;
+    QList<OpenFile> openFiles;
 };
 
 #endif // MYFS_H
