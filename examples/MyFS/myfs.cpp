@@ -12,12 +12,18 @@
 
 #include <QByteArray>
 
-#define READONLY_FS 1
+#define READONLY_FS 0
 
 #define DIR_BLOCK_SIZE 0x400
 #define REG_BLOCK_SIZE 0x1000
 
 #define MAX_OPEN_FILES 1000
+
+#if DIR_BLOCK_SIZE < REG_BLOCK_SIZE
+#define MIN_BLOCK_SIZE DIR_BLOCK_SIZE
+#else
+#define MIN_BLOCK_SIZE REG_BLOCK_SIZE
+#endif
 
 static char str_buffer[0x100];
 
@@ -69,7 +75,7 @@ void MyFS::createNewFilesystem(QString filename)
     if (write(fd, str_buffer, 1) != 1) goto abort;
     str_buffer[1] = '.';
     if (write(fd, str_buffer + 1, 1) != 1) goto abort;
-    /* /../ is the same as / (root directory) */
+    /* /../ is the same as / (root directory) (overwritten by fuse, but let's do it the right way) */
     if (write(fd, &addr, 4) != 4) goto abort;
     str_buffer[0] = 2;
     if (write(fd, str_buffer, 1) != 1) goto abort;
@@ -169,7 +175,7 @@ int MyFS::sMkFile(const lString &pathname, mode_t mst_mode)
     while (shallowCopy.str_value[shallowCopy.str_len - 1] != '/')
         --shallowCopy.str_len;
     len -= shallowCopy.str_len;
-    int start = shallowCopy.str_len + 1;
+    int start = shallowCopy.str_len;
     if (len > 0xFF)
         return -ENAMETOOLONG;
     /* Get the addresse of the parent directory */
@@ -200,7 +206,7 @@ int MyFS::sMkFile(const lString &pathname, mode_t mst_mode)
         return -ENOTDIR;
     /* Check the permissions */
     if (!(mshort & S_IWUSR))
-        return -EACCESS;
+        return -EACCES;
     /* Create the file block */
     quint32 file;
     ret_value = getBlock(mst_mode & SF_MODE_DIRECTORY ? DIR_BLOCK_SIZE : REG_BLOCK_SIZE, file);
@@ -272,18 +278,19 @@ int MyFS::sMkFile(const lString &pathname, mode_t mst_mode)
                 return -EIO;
             quint32 used = (quint32) currentPos;
             used -= currentPart;
-            if (block_size - used >= len + 5)
+            if (block_size - used >= (quint32) len + 5)
             {
                 /* Add entry to the existing list */
                 currentPos -= 4;
                 if (lseek(fd, currentPos, SEEK_SET) != currentPos)
                     return -EIO;
+                file = htonl(file);
                 if (write(fd, &file, 4) != 4)
                     return -EIO;
                 unsigned char sLen = (unsigned char) len;
                 if (write(fd, &sLen, 1) != 1)
                     return -EIO;
-                if (write(fd, pathname + start, len) != len)
+                if (write(fd, pathname.str_value + start, len) != len)
                     return -EIO;
                 if (write(fd, &addr, 4) != 4)
                     return -EIO;
@@ -308,12 +315,13 @@ int MyFS::sMkFile(const lString &pathname, mode_t mst_mode)
                     freeBlock(file);
                     return ret_value;
                 }
+                file = htonl(file);
                 if (write(fd, &file, 4) != 4)
                     return -EIO;
                 unsigned char sLen = (unsigned char) len;
                 if (write(fd, &sLen, 1) != 1)
                     return -EIO;
-                if (write(fd, pathname + start, len) != len)
+                if (write(fd, pathname.str_value + start, len) != len)
                     return -EIO;
                 if (write(fd, &addr, 4) != 4)
                     return -EIO;
@@ -331,7 +339,7 @@ int MyFS::sMkFile(const lString &pathname, mode_t mst_mode)
                 return -EIO;
             if (read(fd, str_buffer, sLen) != sLen)
                 return -EIO;
-            if ((sLen == len) && (memcmp(str_buffer, pathname + start, len) == 0))
+            if ((sLen == len) && (memcmp(str_buffer, pathname.str_value + start, len) == 0))
             {
                 freeBlock(file);
                 return -EEXIST;
@@ -360,18 +368,18 @@ int MyFS::sOpenDir(const lString &pathname, int &fd)
     mshort = ntohs(mshort);
     if (mshort & SF_MODE_REGULARFILE)
         return -ENOTDIR;
-    int i = 0;
-    while ((i < openFiles.count()) && openFiles.at(i).nodeAddr) ++i;
+    fd = 0;
+    while ((fd < openFiles.count()) && openFiles.at(fd).nodeAddr) ++fd;
     myDir.currentAddr = myDir.nodeAddr + 16;
     myDir.nextAddr = ntohl(myDir.nextAddr);
     myDir.isRegular = false;
-    if (i == openFiles.count())
+    if (fd == openFiles.count())
     {
-        if (i > MAX_OPEN_FILES)
+        if (fd > MAX_OPEN_FILES)
             return -ENFILE;
         openFiles.append(myDir);
     } else {
-        openFiles[i] = myDir;
+        openFiles[fd] = myDir;
     }
     return 0;
 }
@@ -449,10 +457,56 @@ int MyFS::getBlock(quint32 size, quint32 &addr)
     Q_UNUSED(addr);
     return -EROFS;
 #else
-    // TODO
-    Q_UNUSED(size);
-    Q_UNUSED(addr);
-    return 0;
+    quint32 currentAddr = first_blank, refAddr = 4, bsize;
+    while (true)
+    {
+        if (lseek(fd, currentAddr, SEEK_SET) != currentAddr)
+            return -EIO;
+        if (read(fd, &bsize, 4) != 4)
+            return -EIO;
+        bsize = ntohl(bsize);
+        if (bsize >= size)
+        {
+            if (bsize >= size + MIN_BLOCK_SIZE)
+            {
+                /* We split the space in two parts */
+                if (lseek(fd, currentAddr, SEEK_SET) != currentAddr)
+                    return -EIO;
+                bsize -= size;
+                addr = currentAddr + bsize;
+                bsize = htonl(bsize);
+                if (write(fd, &bsize, 4) != 4)
+                    return -EIO;
+                if (lseek(fd, addr, SEEK_SET) != addr)
+                    return -EIO;
+                bsize = htonl(size);
+                if (write(fd, &bsize, 4) != 4)
+                    return -EIO;
+                currentAddr = 0;
+                if (write(fd, &currentAddr, 4) != 4)
+                    return -EIO;
+            } else {
+                /* We use all the space */
+                addr = currentAddr;
+                if (read(fd, &currentAddr, 4) != 4)
+                    return -EIO;
+                if (lseek(fd, refAddr, SEEK_SET) != refAddr)
+                    return -EIO;
+                if (write(fd, &currentAddr, 4) != 4)
+                    return -EIO;
+                if (lseek(fd, addr + 4, SEEK_SET) != addr + 4)
+                    return -EIO;
+                bsize = 0;
+                if (write(fd, &bsize, 4) != 4)
+                    return -EIO;
+            }
+            return 0;
+        }
+        refAddr = currentAddr + 4;
+        if (read(fd, &currentAddr, 4) != 4)
+            return -EIO;
+        currentAddr = ntohl(currentAddr);
+    }
 #endif /* READONLY_FS */
 }
 
@@ -489,7 +543,7 @@ int MyFS::getAddress(lString &pathname, quint32 &result)
     while (pathname.str_value[pathname.str_len - 1] != '/')
         --pathname.str_len;
     len -= pathname.str_len;
-    int start = pathname.str_len + 1;
+    int start = pathname.str_len;
     /* Run this function recursively on the beginning of the path */
     int ret_value = getAddress(pathname, result);
     if (ret_value != 0)

@@ -70,7 +70,10 @@ int s_mkdir(const char *path, mode_t mode)
     lString lPath = toLString(path);
     if (lPath.str_len > STR_LEN_MAX)
         return -ENAMETOOLONG;
-    if ((mode & 0xFE00) != 0x4000)
+    if ((mode & 0xFE00) == 0)
+    {
+        mode |= 0x4000;
+    } else if ((mode & 0xFE00) != 0x4000)
     {
         dispLog("Warning: s_mkdir on \"%s\" with mode 0%o\n", path, mode);
         return -EPERM;
