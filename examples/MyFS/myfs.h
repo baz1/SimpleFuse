@@ -3,6 +3,8 @@
 
 #include "sfuse/qsimplefuse.h"
 
+#include <QHash>
+
 /*
     This implementation is an example of the usage of QSimpleFuse.
     As such, it is not efficient at all and not recommended for any real use.
@@ -25,8 +27,8 @@
 
         If this is a directory, for each entry:
             * Address (4 bytes) (0 to end the list)
-            * Name length (NULL terminating byte included) (1 byte)
-            * Name (C string)
+            * Name length (NULL terminating byte excluded) (1 byte)
+            * Name (without the NULL terminating byte)
 
         If this is a regular file:
             * The size of its data (4 bytes)
@@ -41,12 +43,16 @@ public:
     static void createNewFilesystem(QString filename);
     void sInit();
     void sDestroy();
+    int sGetAttr(const lString &pathname, sAttr &attr);
 private:
     static char *convStr(const QString &str);
+    /* Warning: the following function does not preserve pathname (length changed) */
+    int getAddress(lString &pathname, quint32 &result);
 private:
     char *filename;
     int fd;
     quint32 root_address, first_blank;
+    QHash<QString, quint32> cache;
 };
 
 #endif // MYFS_H

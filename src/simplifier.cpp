@@ -266,12 +266,17 @@ void *s_init(fuse_conn_info *conn)
 {
     Q_UNUSED(conn);
     (QSimpleFuse::_instance)->sInit();
-    return PERSDATA;
+    PersistentData *data = new PersistentData;
+    memset(&data->def_stat, 0, sizeof(struct stat));
+    data->def_stat.st_uid = geteuid();
+    data->def_stat.st_gid = getegid();
+    return data;
 }
 
 void s_destroy(void *userdata)
 {
-    Q_UNUSED(userdata);
+    PersistentData *data = (PersistentData*) userdata;
+    delete data;
     (QSimpleFuse::_instance)->sDestroy();
 }
 
