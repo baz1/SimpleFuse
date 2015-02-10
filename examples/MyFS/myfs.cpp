@@ -19,7 +19,7 @@
 
 #define MAX_OPEN_FILES 1000
 
-static char str_buffer[0xFF];
+static char str_buffer[0x100];
 
 /* We will make it single-threaded to avoid any further concurrency issues */
 MyFS::MyFS(QString mountPoint, QString filename) : QSimpleFuse(mountPoint, true), filename(convStr(filename)), fd(-1)
@@ -153,6 +153,8 @@ int MyFS::sGetAttr(const lString &pathname, sAttr &attr)
 int MyFS::sMkFile(const lString &pathname, mode_t mst_mode)
 {
 #if READONLY_FS
+    Q_UNUSED(pathname);
+    Q_UNUSED(mst_mode);
     return -EROFS;
 #else
     /* Get the last part of the path */
@@ -364,9 +366,53 @@ int MyFS::sOpenDir(const lString &pathname, int &fd)
         return -ENFILE;
     myDir.currentAddr = myDir.nodeAddr + 16;
     myDir.nextAddr = ntohl(myDir.nextAddr);
-    myDir.partAddr = myDir.nodeAddr;
     myDir.isRegular = false;
     openFiles[i] = myDir;
+    return 0;
+}
+
+int MyFS::sReadDir(int fd, char *&name)
+{
+    if ((fd >= openFiles.count()) || (!openFiles.at(fd).nodeAddr) || openFiles.at(fd).isRegular)
+        return -EBADF;
+    OpenFile *file = &openFiles[fd];
+    if (lseek(this->fd, file->currentAddr, SEEK_SET) != file->currentAddr)
+        return -EIO;
+    quint32 addr;
+    while (true)
+    {
+        if (read(fd, &addr, 4) != 4)
+            return -EIO;
+        if (addr == 0)
+        {
+            if (!file->nextAddr)
+            {
+                name = NULL;
+                return 0;
+            }
+            file->nextAddr += 4;
+            if (lseek(this->fd, file->nextAddr, SEEK_SET) != file->nextAddr)
+                goto ioerror;
+            file->currentAddr = file->nextAddr + 4;
+            if (read(fd, &file->nextAddr, 4) != 4)
+                goto ioerror;
+            file->nextAddr = ntohl(file->nextAddr);
+            continue;
+        }
+        unsigned char sLen;
+        if (read(fd, &sLen, 1) != 1)
+            return -EIO;
+        if (read(fd, str_buffer, sLen) != sLen)
+            return -EIO;
+        file->currentAddr += 5;
+        file->currentAddr += sLen;
+        str_buffer[sLen] = 0;
+        name = str_buffer;
+        return 0;
+    }
+ioerror:
+    file->nodeAddr = 0;
+    return -EIO;
 }
 
 char *MyFS::convStr(const QString &str)
@@ -383,9 +429,14 @@ char *MyFS::convStr(const QString &str)
 int MyFS::getBlock(quint32 size, quint32 &addr)
 {
 #if READONLY_FS
+    Q_UNUSED(size);
+    Q_UNUSED(addr);
     return -EROFS;
 #else
     // TODO
+    Q_UNUSED(size);
+    Q_UNUSED(addr);
+    return 0;
 #endif /* READONLY_FS */
 }
 
@@ -393,9 +444,12 @@ int MyFS::getBlock(quint32 size, quint32 &addr)
 int MyFS::freeBlock(quint32 addr)
 {
 #if READONLY_FS
+    Q_UNUSED(addr);
     return -EROFS;
 #else
     // TODO
+    Q_UNUSED(addr);
+    return 0;
 #endif /* READONLY_FS */
 }
 

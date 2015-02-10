@@ -39,7 +39,7 @@
 struct OpenFile
 {
     quint32 nodeAddr;
-    quint32 partAddr;
+    quint32 partAddr; /* Only used in regular files */
     quint32 nextAddr;
     quint32 currentAddr;
     quint32 partOffset; /* Only used in regular files */
@@ -57,6 +57,7 @@ public:
     int sGetAttr(const lString &pathname, sAttr &attr);
     int sMkFile(const lString &pathname, mode_t mst_mode);
     int sOpenDir(const lString &pathname, int &fd);
+    int sReadDir(int fd, char *&name);
 private:
     static char *convStr(const QString &str);
     int getBlock(quint32 size, quint32 &addr);
