@@ -348,26 +348,31 @@ int MyFS::sOpenDir(const lString &pathname, int &fd)
     int ret_value = getAddress(shallowCopy, myDir.nodeAddr);
     if (ret_value != 0)
         return ret_value;
-    if (lseek(fd, myDir.nodeAddr + 4, SEEK_SET) != myDir.nodeAddr + 4)
+    if (lseek(this->fd, myDir.nodeAddr + 4, SEEK_SET) != myDir.nodeAddr + 4)
         return -EIO;
-    if (read(fd, &myDir.nextAddr, 4) != 4)
+    if (read(this->fd, &myDir.nextAddr, 4) != 4)
         return -EIO;
-    if (read(fd, str_buffer, 6) != 6)
+    if (read(this->fd, str_buffer, 6) != 6)
         return -EIO;
     quint16 mshort;
-    if (read(fd, &mshort, 4) != 4)
+    if (read(this->fd, &mshort, 4) != 4)
         return -EIO;
     mshort = ntohs(mshort);
     if (mshort & SF_MODE_REGULARFILE)
         return -ENOTDIR;
     int i = 0;
     while ((i < openFiles.count()) && openFiles.at(i).nodeAddr) ++i;
-    if ((i == openFiles.count()) && (i > MAX_OPEN_FILES))
-        return -ENFILE;
     myDir.currentAddr = myDir.nodeAddr + 16;
     myDir.nextAddr = ntohl(myDir.nextAddr);
     myDir.isRegular = false;
-    openFiles[i] = myDir;
+    if (i == openFiles.count())
+    {
+        if (i > MAX_OPEN_FILES)
+            return -ENFILE;
+        openFiles.append(myDir);
+    } else {
+        openFiles[i] = myDir;
+    }
     return 0;
 }
 
@@ -381,7 +386,7 @@ int MyFS::sReadDir(int fd, char *&name)
     quint32 addr;
     while (true)
     {
-        if (read(fd, &addr, 4) != 4)
+        if (read(this->fd, &addr, 4) != 4)
             return -EIO;
         if (addr == 0)
         {
@@ -394,15 +399,15 @@ int MyFS::sReadDir(int fd, char *&name)
             if (lseek(this->fd, file->nextAddr, SEEK_SET) != file->nextAddr)
                 goto ioerror;
             file->currentAddr = file->nextAddr + 4;
-            if (read(fd, &file->nextAddr, 4) != 4)
+            if (read(this->fd, &file->nextAddr, 4) != 4)
                 goto ioerror;
             file->nextAddr = ntohl(file->nextAddr);
             continue;
         }
         unsigned char sLen;
-        if (read(fd, &sLen, 1) != 1)
+        if (read(this->fd, &sLen, 1) != 1)
             return -EIO;
-        if (read(fd, str_buffer, sLen) != sLen)
+        if (read(this->fd, str_buffer, sLen) != sLen)
             return -EIO;
         file->currentAddr += 5;
         file->currentAddr += sLen;
@@ -423,6 +428,7 @@ int MyFS::sCloseDir(int fd)
     file->nodeAddr = 0;
     while ((!openFiles.isEmpty()) && (!openFiles.last().nodeAddr))
         openFiles.removeLast();
+    return 0;
 }
 
 char *MyFS::convStr(const QString &str)
