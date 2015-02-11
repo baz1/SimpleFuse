@@ -517,8 +517,101 @@ int MyFS::freeBlock(quint32 addr)
     Q_UNUSED(addr);
     return -EROFS;
 #else
-    // TODO
-    Q_UNUSED(addr);
+    /* Get the length of the block to free */
+    quint32 block_len;
+    if (lseek(fd, addr, SEEK_SET) != addr)
+        return -EIO;
+    if (read(fd, &block_len, 4) != 4)
+        return -EIO;
+    block_len = ntohl(block_len);
+    /* Search for the next free block */
+    quint32 refAddr = 0, currentAddr = first_blank, prev_len = 0;
+    while (currentAddr < addr)
+    {
+        refAddr = currentAddr;
+        if (lseek(fd, currentAddr, SEEK_SET) != currentAddr)
+            return -EIO;
+        if (read(fd, &prev_len, 4) != 4)
+            return -EIO;
+        prev_len = ntohl(prev_len);
+        if (read(fd, &currentAddr, 4) != 4)
+            return -EIO;
+        if (!currentAddr)
+            break;
+        currentAddr = ntohl(currentAddr);
+    }
+    /* Check merging requirements */
+    if (refAddr + prev_len == addr)
+    {
+        if (addr + block_len == currentAddr)
+        {
+            /* Merge with the previous and the next free block */
+            quint32 currentLen, currentNext;
+            if (lseek(fd, currentAddr, SEEK_SET) != currentAddr)
+                return -EIO;
+            if (read(fd, &currentLen, 4) != 4)
+                return -EIO;
+            currentLen = ntohl(currentLen);
+            if (read(fd, &currentNext, 4) != 4)
+                return -EIO;
+            if (lseek(fd, refAddr, SEEK_SET) != refAddr)
+                return -EIO;
+            block_len += prev_len;
+            block_len += currentLen;
+            block_len = htonl(block_len);
+            if (write(fd, &block_len, 4) != 4)
+                return -EIO;
+            if (write(fd, &currentNext, 4) != 4)
+                return -EIO;
+        } else {
+            /* Merge with the previous free block */
+            if (lseek(fd, refAddr, SEEK_SET) != refAddr)
+                return -EIO;
+            block_len += prev_len;
+            block_len = htonl(block_len);
+            if (write(fd, &block_len, 4) != 4)
+                return -EIO;
+            currentAddr = htonl(currentAddr);
+            if (write(fd, &currentAddr, 4) != 4)
+                return -EIO;
+        }
+    } else {
+        /* Change the link of the previous block */
+        refAddr += 4;
+        if (lseek(fd, refAddr, SEEK_SET) != refAddr)
+            return -EIO;
+        refAddr = htonl(addr);
+        if (write(fd, &refAddr, 4) != 4)
+            return -EIO;
+        if (addr + block_len == currentAddr)
+        {
+            /* Merge with the next free block */
+            quint32 currentLen, currentNext;
+            if (lseek(fd, currentAddr, SEEK_SET) != currentAddr)
+                return -EIO;
+            if (read(fd, &currentLen, 4) != 4)
+                return -EIO;
+            currentLen = ntohl(currentLen);
+            if (read(fd, &currentNext, 4) != 4)
+                return -EIO;
+            if (lseek(fd, addr, SEEK_SET) != addr)
+                return -EIO;
+            block_len += currentLen;
+            block_len = htonl(block_len);
+            if (write(fd, &block_len, 4) != 4)
+                return -EIO;
+            if (write(fd, &currentNext, 4) != 4)
+                return -EIO;
+        } else {
+            /* Do not merge with anything */
+            addr += 4;
+            if (lseek(fd, addr, SEEK_SET) != addr)
+                return -EIO;
+            currentAddr = htonl(currentAddr);
+            if (write(fd, &currentAddr, 4) != 4)
+                return -EIO;
+        }
+    }
     return 0;
 #endif /* READONLY_FS */
 }
