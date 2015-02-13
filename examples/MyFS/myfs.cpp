@@ -554,6 +554,11 @@ int MyFS::sRmFile(const lString &pathname, bool isDir)
 
 int MyFS::sChMod(const lString &pathname, mode_t mst_mode)
 {
+#if READONLY_FS
+    Q_UNUSED(pathname);
+    Q_UNUSED(mst_mode);
+    return -EROFS;
+#else
     quint32 nodeAddr;
     quint16 mshort;
     lString shallowCopy = pathname;
@@ -573,6 +578,31 @@ int MyFS::sChMod(const lString &pathname, mode_t mst_mode)
     if (write(fd, &mshort, 2) != 2)
         return -EIO;
     return 0;
+#endif /* READONLY_FS */
+}
+
+int MyFS::sUTime(const lString &pathname, time_t mst_atime, time_t mst_mtime)
+{
+    Q_UNUSED(mst_atime);
+#if READONLY_FS
+    Q_UNUSED(pathname);
+    Q_UNUSED(mst_mtime);
+    return -EROFS;
+#else
+    quint32 nodeAddr;
+    quint32 mtime;
+    lString shallowCopy = pathname;
+    int ret_value = getAddress(shallowCopy, nodeAddr);
+    if (ret_value != 0)
+        return ret_value;
+    nodeAddr += 8;
+    if (lseek(fd, nodeAddr, SEEK_SET) != nodeAddr)
+        return -EIO;
+    mtime = htonl(mst_mtime);
+    if (write(fd, &mtime, 4) != 4)
+        return -EIO;
+    return 0;
+#endif /* READONLY_FS */
 }
 
 int MyFS::sOpenDir(const lString &pathname, int &fd)

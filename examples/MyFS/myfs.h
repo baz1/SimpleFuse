@@ -58,6 +58,7 @@ public:
     int sMkFile(const lString &pathname, mode_t mst_mode);
     int sRmFile(const lString &pathname, bool isDir);
     int sChMod(const lString &pathname, mode_t mst_mode);
+    int sUTime(const lString &pathname, time_t mst_atime, time_t mst_mtime);
     int sOpenDir(const lString &pathname, int &fd);
     int sReadDir(int fd, char *&name);
     int sCloseDir(int fd);
