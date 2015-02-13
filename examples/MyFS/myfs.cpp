@@ -25,6 +25,8 @@
 #define MIN_BLOCK_SIZE REG_BLOCK_SIZE
 #endif
 
+#define SEEK_ERROR ((off_t) (-1))
+
 static char str_buffer[0x100];
 
 /* We will make it single-threaded to avoid any further concurrency issues */
@@ -178,7 +180,7 @@ int MyFS::sMkFile(const lString &pathname, mode_t mst_mode)
     int start = shallowCopy.str_len;
     if (len > 0xFF)
         return -ENAMETOOLONG;
-    /* Get the addresse of the parent directory */
+    /* Get the address of the parent directory */
     quint32 dirAddr;
     int ret_value = getAddress(shallowCopy, dirAddr);
     if (ret_value != 0)
@@ -212,8 +214,8 @@ int MyFS::sMkFile(const lString &pathname, mode_t mst_mode)
     ret_value = getBlock(mst_mode & SF_MODE_DIRECTORY ? DIR_BLOCK_SIZE : REG_BLOCK_SIZE, file);
     if (ret_value != 0)
         return ret_value;
-    quint32 addr = htonl(time(0));
-    if (write(fd, &addr, 4) != 4)
+    quint32 createDate = htonl(time(0)), addr;
+    if (write(fd, &createDate, 4) != 4)
         return -EIO;
     mshort = htons(2);
     if (write(fd, &mshort, 2) != 2)
@@ -249,6 +251,12 @@ int MyFS::sMkFile(const lString &pathname, mode_t mst_mode)
         if (write(fd, &fsize, 4) != 4)
             return -EIO;
     }
+    /* Modify the last modification time */
+    addr = dirAddr + 8;
+    if (lseek(fd, addr, SEEK_SET) != addr)
+        return -EIO;
+    if (write(fd, &createDate, 4) != 4)
+        return -EIO;
     /* Add new entry */
     quint32 currentPart = dirAddr;
     if (mst_mode & SF_MODE_DIRECTORY)
@@ -258,7 +266,8 @@ int MyFS::sMkFile(const lString &pathname, mode_t mst_mode)
             return -EIO;
         if (nlink == 0xFFFF)
             return -EMLINK;
-        if (write(fd, &(++nlink), 2) != 2)
+        nlink = htons(nlink + 1);
+        if (write(fd, &nlink, 2) != 2)
             return -EIO;
         if (read(fd, &mshort, 2) != 2)
             return -EIO;
@@ -274,7 +283,7 @@ int MyFS::sMkFile(const lString &pathname, mode_t mst_mode)
         if (addr == 0)
         {
             off_t currentPos = lseek(fd, 0, SEEK_CUR);
-            if (currentPos == ((off_t) -1))
+            if (currentPos == SEEK_ERROR)
                 return -EIO;
             quint32 used = (quint32) currentPos;
             used -= currentPart;
@@ -344,6 +353,200 @@ int MyFS::sMkFile(const lString &pathname, mode_t mst_mode)
                 freeBlock(file);
                 return -EEXIST;
             }
+        }
+    }
+#endif /* READONLY_FS */
+}
+
+int MyFS::sRmFile(const lString &pathname, bool isDir)
+{
+#if READONLY_FS
+    Q_UNUSED(pathname);
+    Q_UNUSED(isDir);
+    return -EROFS;
+#else
+    /* Get the last part of the path */
+    lString shallowCopy = pathname;
+    if (shallowCopy.str_len == 0)
+        return -ENOENT;
+    while ((shallowCopy.str_len > 0) && (shallowCopy.str_value[shallowCopy.str_len - 1] == '/'))
+        --shallowCopy.str_len;
+    if (shallowCopy.str_len == 0)
+        return -EEXIST;
+    int len = shallowCopy.str_len;
+    while (shallowCopy.str_value[shallowCopy.str_len - 1] != '/')
+        --shallowCopy.str_len;
+    len -= shallowCopy.str_len;
+    int start = shallowCopy.str_len;
+    /* Get the address of the parent directory */
+    quint32 dirAddr, beforeAddr, currentAddr;
+    int ret_value = getAddress(shallowCopy, dirAddr);
+    if (ret_value != 0)
+        return ret_value;
+    /* Check whether or not this is indeed a directory */
+    currentAddr = dirAddr + 4;
+    if (lseek(fd, currentAddr, SEEK_SET) != currentAddr)
+        return -EIO;
+    quint32 next_block;
+    if (read(fd, &next_block, 4) != 4)
+        return -EIO;
+    if (read(fd, str_buffer, 4) != 4)
+        return -EIO;
+    quint16 mshort;
+    if (read(fd, &mshort, 2) != 2)
+        return -EIO;
+    quint16 nlink = ntohs(mshort);
+    if (read(fd, &mshort, 2) != 2)
+        return -EIO;
+    mshort = ntohs(mshort);
+    if (mshort & SF_MODE_REGULARFILE)
+        return -ENOTDIR;
+    /* Check the permissions */
+    if (!(mshort & S_IWUSR))
+        return -EACCES;
+    /* Look for the pathname entry */
+    while (true)
+    {
+        quint32 addr;
+        if (read(fd, &addr, 4) != 4)
+            return -EIO;
+        if (!addr)
+        {
+            if (!next_block)
+                return -ENOENT;
+            beforeAddr = currentAddr;
+            currentAddr = ntohl(next_block) + 4;
+            if (lseek(fd, currentAddr, SEEK_SET) != currentAddr)
+                return -EIO;
+            if (read(fd, &next_block, 4) != 4)
+                return -EIO;
+            continue;
+        }
+        unsigned char nameLen;
+        if (read(fd, &nameLen, 1) != 1)
+            return -EIO;
+        if (read(fd, &str_buffer, nameLen) != nameLen)
+            return -EIO;
+        if ((nameLen == len) && (memcmp(pathname.str_value + start, str_buffer, len) == 0))
+        {
+            /* Found it. */
+            addr = ntohl(addr);
+            off_t nextEntry = lseek(fd, 0, SEEK_CUR);
+            if (nextEntry == SEEK_ERROR)
+                return -EIO;
+            /* Check if isDir has the right value. */
+            if (lseek(fd, addr + 14, SEEK_SET) != addr + 14)
+                return -EIO;
+            if (read(fd, &mshort, 2) != 2)
+                return -EIO;
+            mshort = ntohs(mshort);
+            if (isDir ^ ((bool) (mshort & SF_MODE_DIRECTORY)))
+                return isDir ? -ENOTDIR : -EISDIR;
+            /* If this is a directory, check if it is empty */
+            if (isDir)
+            {
+                int myfd;
+                char *entryName;
+                ret_value = sOpenDir(pathname, myfd);
+                if (ret_value != 0)
+                    return ret_value;
+                while (true)
+                {
+                    ret_value = sReadDir(myfd, entryName);
+                    if (ret_value != 0)
+                        return ret_value;
+                    if (entryName == NULL)
+                        break;
+                    if (strcmp(entryName, ".") == 0)
+                        continue;
+                    if (strcmp(entryName, "..") == 0)
+                        continue;
+                    return -ENOTEMPTY;
+                }
+                sCloseDir(myfd);
+            }
+            /* Remove addr (or just decrease the link counter) */
+            if (!isDir)
+            {
+                if (lseek(fd, addr + 12, SEEK_SET) == SEEK_ERROR)
+                    return -EIO;
+                if (read(fd, &mshort, 2) != 2)
+                    return -EIO;
+                mshort = ntohs(mshort) - 1;
+                if (mshort)
+                {
+                    if (lseek(fd, -2, SEEK_CUR) == SEEK_ERROR)
+                        return -EIO;
+                    mshort = htons(mshort);
+                    if (write(fd, &mshort, 2) != 2)
+                        return -EIO;
+                } else {
+                    ret_value = freeBlocks(addr);
+                    if (ret_value != 0)
+                        return ret_value;
+                }
+            } else {
+                ret_value = freeBlocks(addr);
+                if (ret_value != 0)
+                    return ret_value;
+            }
+            /* Remove the corresponding entry in the parent */
+            if (lseek(fd, nextEntry, SEEK_SET) != nextEntry)
+                return -EIO;
+            if (read(fd, &addr, 4) != 4)
+                return -EIO;
+            if ((!addr) && (((quint32) nextEntry) == currentAddr + 4))
+            {
+                /* Empty part to remove */
+                if (lseek(fd, beforeAddr, SEEK_SET) != beforeAddr)
+                    return -EIO;
+                if (write(fd, &next_block, 4) != 4)
+                    return -EIO;
+                ret_value = freeBlock(currentAddr - 4);
+                if (ret_value != 0)
+                    return ret_value;
+            } else {
+                /* Move following entries */
+                len += 5;
+                if (lseek(fd, -(len + 4), SEEK_CUR) == SEEK_ERROR)
+                    return -EIO;
+                if (write(fd, &addr, 4) != 4)
+                    return -EIO;
+                while (addr)
+                {
+                    if (lseek(fd, len, SEEK_CUR) == SEEK_ERROR)
+                        return -EIO;
+                    if (read(fd, &nameLen, 1) != 1)
+                        return -EIO;
+                    if (read(fd, &str_buffer, nameLen) != nameLen)
+                        return -EIO;
+                    if (write(fd, &addr, 4) != 4)
+                        return -EIO;
+                    if (lseek(fd, -(len + 5 + (int) nameLen), SEEK_CUR) == SEEK_ERROR)
+                        return -EIO;
+                    if (write(fd, &nameLen, 1) != 1)
+                        return -EIO;
+                    if (write(fd, &str_buffer, nameLen) != nameLen)
+                        return -EIO;
+                    if (write(fd, &addr, 4) != 4)
+                        return -EIO;
+                }
+            }
+            /* Change the last modification time */
+            dirAddr += 8;
+            if (lseek(fd, dirAddr, SEEK_SET) != dirAddr)
+                return -EIO;
+            addr = htonl(time(0));
+            if (write(fd, &addr, 4) != 4)
+                return -EIO;
+            /* And the number of hard links if need be */
+            if (isDir)
+            {
+                nlink = htons(nlink - 1);
+                if (write(fd, &nlink, 2) != 2)
+                    return -EIO;
+            }
+            return 0;
         }
     }
 #endif /* READONLY_FS */
@@ -510,6 +713,27 @@ int MyFS::getBlock(quint32 size, quint32 &addr)
 #endif /* READONLY_FS */
 }
 
+/* Frees the block at address addr and its following parts, and returns 0 on success. */
+int MyFS::freeBlocks(quint32 addr)
+{
+    int ret_value;
+    quint32 next_block;
+    while (true)
+    {
+        if (lseek(fd, addr + 4, SEEK_SET) == SEEK_ERROR)
+            return -EIO;
+        if (read(fd, &next_block, 4) != 4)
+            return -EIO;
+        ret_value = freeBlock(addr);
+        if (ret_value != 0)
+            return ret_value;
+        if (!next_block)
+            break;
+        addr = ntohl(next_block);
+    }
+    return 0;
+}
+
 /* Frees the block at address addr and returns 0 on success. */
 int MyFS::freeBlock(quint32 addr)
 {
@@ -662,7 +886,7 @@ int MyFS::getAddress(lString &pathname, quint32 &result)
         quint32 addr;
         if (read(fd, &addr, 4) != 4)
             return -EIO;
-        if (addr == 0)
+        if (!addr)
         {
             if (!result)
                 return -ENOENT;

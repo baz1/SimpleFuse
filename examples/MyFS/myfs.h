@@ -56,12 +56,14 @@ public:
     void sDestroy();
     int sGetAttr(const lString &pathname, sAttr &attr);
     int sMkFile(const lString &pathname, mode_t mst_mode);
+    int sRmFile(const lString &pathname, bool isDir);
     int sOpenDir(const lString &pathname, int &fd);
     int sReadDir(int fd, char *&name);
     int sCloseDir(int fd);
 private:
     static char *convStr(const QString &str);
     int getBlock(quint32 size, quint32 &addr);
+    int freeBlocks(quint32 addr);
     int freeBlock(quint32 addr);
     /* Warning: the following function does not preserve pathname (length changed) */
     int getAddress(lString &pathname, quint32 &result);
