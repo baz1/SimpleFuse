@@ -552,6 +552,29 @@ int MyFS::sRmFile(const lString &pathname, bool isDir)
 #endif /* READONLY_FS */
 }
 
+int MyFS::sChMod(const lString &pathname, mode_t mst_mode)
+{
+    quint32 nodeAddr;
+    quint16 mshort;
+    lString shallowCopy = pathname;
+    int ret_value = getAddress(shallowCopy, nodeAddr);
+    if (ret_value != 0)
+        return ret_value;
+    nodeAddr += 14;
+    if (lseek(fd, nodeAddr, SEEK_SET) != nodeAddr)
+        return -EIO;
+    if (read(fd, &mshort, 2) != 2)
+        return -EIO;
+    mshort = ntohs(mshort);
+    mshort = (mshort & (~0x1FF)) | (mst_mode & 0x1FF);
+    if (lseek(fd, nodeAddr, SEEK_SET) != nodeAddr)
+        return -EIO;
+    mshort = htons(mshort);
+    if (write(fd, &mshort, 2) != 2)
+        return -EIO;
+    return 0;
+}
+
 int MyFS::sOpenDir(const lString &pathname, int &fd)
 {
     OpenFile myDir;
@@ -559,7 +582,7 @@ int MyFS::sOpenDir(const lString &pathname, int &fd)
     int ret_value = getAddress(shallowCopy, myDir.nodeAddr);
     if (ret_value != 0)
         return ret_value;
-    if (lseek(this->fd, myDir.nodeAddr + 4, SEEK_SET) != myDir.nodeAddr + 4)
+    if (lseek(this->fd, myDir.nodeAddr + 4, SEEK_SET) == SEEK_ERROR)
         return -EIO;
     if (read(this->fd, &myDir.nextAddr, 4) != 4)
         return -EIO;

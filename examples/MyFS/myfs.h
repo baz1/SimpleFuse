@@ -57,6 +57,7 @@ public:
     int sGetAttr(const lString &pathname, sAttr &attr);
     int sMkFile(const lString &pathname, mode_t mst_mode);
     int sRmFile(const lString &pathname, bool isDir);
+    int sChMod(const lString &pathname, mode_t mst_mode);
     int sOpenDir(const lString &pathname, int &fd);
     int sReadDir(int fd, char *&name);
     int sCloseDir(int fd);
