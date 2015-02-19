@@ -707,6 +707,25 @@ int MyFS::sOpen(const lString &pathname, int flags, int &fd)
     return 0;
 }
 
+int MyFS::sClose(int fd)
+{
+    if ((fd >= openFiles.count()) || (!openFiles.at(fd).nodeAddr) || (!openFiles.at(fd).isRegular))
+        return -EBADF;
+    OpenFile *file = &openFiles[fd];
+    if (file->flags & OPEN_FILE_FLAGS_MODIFIED)
+    {
+        if (lseek(this->fd, file->nodeAddr + 16, SEEK_SET) == SEEK_ERROR)
+            return -EIO;
+        file->fileLength = htonl(file->fileLength);
+        if (write(this->fd, &file->fileLength, 4) != 4)
+            return -EIO;
+    }
+    file->nodeAddr = 0;
+    while ((!openFiles.isEmpty()) && (!openFiles.last().nodeAddr))
+        openFiles.removeLast();
+    return 0;
+}
+
 int MyFS::sOpenDir(const lString &pathname, int &fd)
 {
     if (this->fd < 0) return -EIO;
