@@ -22,6 +22,9 @@
     FILE_BLOCK:
         Its size is followed by the following bytes:
         4-7: Address of the next part of the file (or 0 if this is the last part)
+
+        And then, for each first part:
+
         8-11: Last modification time
         12-13: Number of hard links
         14-15: SF_MODE_DIRECTORY for directory, SF_MODE_REGULARFILE for file, plus access rights
@@ -58,12 +61,17 @@ public:
     int sMkFile(const lString &pathname, mode_t mst_mode);
     int sRmFile(const lString &pathname, bool isDir);
     int sChMod(const lString &pathname, mode_t mst_mode);
+    int sTruncate(const lString &pathname, off_t newsize);
     int sUTime(const lString &pathname, time_t mst_atime, time_t mst_mtime);
     int sOpenDir(const lString &pathname, int &fd);
     int sReadDir(int fd, char *&name);
     int sCloseDir(int fd);
 private:
+    int myGetAttr(quint32 addr, sAttr &attr);
+    int myTruncate(quint32 addr, off_t newsize);
+    bool myWriteB(quint32 size);
     static char *convStr(const QString &str);
+    int getBlocks(quint32 size, quint32 &addr);
     int getBlock(quint32 size, quint32 &addr);
     int freeBlocks(quint32 addr);
     int freeBlock(quint32 addr);

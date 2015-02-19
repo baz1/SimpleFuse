@@ -135,27 +135,7 @@ int MyFS::sGetAttr(const lString &pathname, sAttr &attr)
     int ret_value = getAddress(shallowCopy, addr);
     if (ret_value != 0)
         return ret_value;
-    addr += 8;
-    if (lseek(fd, addr, SEEK_SET) != addr)
-        return -EIO;
-    if (read(fd, &addr, 4) != 4)
-        return -EIO;
-    attr.mst_atime = (time_t) ntohl(addr);
-    attr.mst_mtime = attr.mst_atime;
-    quint16 mshort;
-    if (read(fd, &mshort, 2) != 2)
-        return -EIO;
-    attr.mst_nlink = (nlink_t) ntohs(mshort);
-    if (read(fd, &mshort, 2) != 2)
-        return -EIO;
-    attr.mst_mode = (mode_t) ntohs(mshort);
-    if (attr.mst_mode & SF_MODE_REGULARFILE)
-    {
-        if (read(fd, &addr, 4) != 4)
-            return -EIO;
-        attr.mst_size = (off_t) ntohl(addr);
-    }
-    return 0;
+    return myGetAttr(addr, attr);
 }
 
 int MyFS::sMkFile(const lString &pathname, mode_t mst_mode)
@@ -165,6 +145,7 @@ int MyFS::sMkFile(const lString &pathname, mode_t mst_mode)
     Q_UNUSED(mst_mode);
     return -EROFS;
 #else
+    if (fd < 0) return -EIO;
     /* Get the last part of the path */
     lString shallowCopy = pathname;
     if (shallowCopy.str_len == 0)
@@ -365,6 +346,7 @@ int MyFS::sRmFile(const lString &pathname, bool isDir)
     Q_UNUSED(isDir);
     return -EROFS;
 #else
+    if (fd < 0) return -EIO;
     /* Get the last part of the path */
     lString shallowCopy = pathname;
     if (shallowCopy.str_len == 0)
@@ -559,6 +541,7 @@ int MyFS::sChMod(const lString &pathname, mode_t mst_mode)
     Q_UNUSED(mst_mode);
     return -EROFS;
 #else
+    if (fd < 0) return -EIO;
     quint32 nodeAddr;
     quint16 mshort;
     lString shallowCopy = pathname;
@@ -581,6 +564,33 @@ int MyFS::sChMod(const lString &pathname, mode_t mst_mode)
 #endif /* READONLY_FS */
 }
 
+int MyFS::sTruncate(const lString &pathname, off_t newsize)
+{
+#if READONLY_FS
+    Q_UNUSED(pathname);
+    Q_UNUSED(newsize);
+    return -EROFS;
+#else
+    if (fd < 0) return -EIO;
+    quint32 nodeAddr;
+    quint16 mshort;
+    lString shallowCopy = pathname;
+    int ret_value = getAddress(shallowCopy, nodeAddr);
+    if (ret_value != 0)
+        return ret_value;
+    if (lseek(fd, nodeAddr + 14, SEEK_SET) == SEEK_ERROR)
+        return -EIO;
+    if (read(fd, &mshort, 2) != 2)
+        return -EIO;
+    mshort = ntohs(mshort);
+    if (mshort & SF_MODE_DIRECTORY)
+        return -EISDIR;
+    if (!(mshort & S_IWUSR))
+        return -EACCES;
+    return myTruncate(nodeAddr, newsize);
+#endif /* READONLY_FS */
+}
+
 int MyFS::sUTime(const lString &pathname, time_t mst_atime, time_t mst_mtime)
 {
     Q_UNUSED(mst_atime);
@@ -589,6 +599,7 @@ int MyFS::sUTime(const lString &pathname, time_t mst_atime, time_t mst_mtime)
     Q_UNUSED(mst_mtime);
     return -EROFS;
 #else
+    if (fd < 0) return -EIO;
     quint32 nodeAddr;
     quint32 mtime;
     lString shallowCopy = pathname;
@@ -607,6 +618,7 @@ int MyFS::sUTime(const lString &pathname, time_t mst_atime, time_t mst_mtime)
 
 int MyFS::sOpenDir(const lString &pathname, int &fd)
 {
+    if (this->fd < 0) return -EIO;
     OpenFile myDir;
     lString shallowCopy = pathname;
     int ret_value = getAddress(shallowCopy, myDir.nodeAddr);
@@ -644,6 +656,7 @@ int MyFS::sReadDir(int fd, char *&name)
 {
     if ((fd >= openFiles.count()) || (!openFiles.at(fd).nodeAddr) || openFiles.at(fd).isRegular)
         return -EBADF;
+    if (this->fd < 0) return -EIO;
     OpenFile *file = &openFiles[fd];
     if (lseek(this->fd, file->currentAddr, SEEK_SET) != file->currentAddr)
         return -EIO;
@@ -695,6 +708,183 @@ int MyFS::sCloseDir(int fd)
     return 0;
 }
 
+int MyFS::myGetAttr(quint32 addr, sAttr &attr)
+{
+    addr += 8;
+    if (lseek(fd, addr, SEEK_SET) != addr)
+        return -EIO;
+    if (read(fd, &addr, 4) != 4)
+        return -EIO;
+    attr.mst_atime = (time_t) ntohl(addr);
+    attr.mst_mtime = attr.mst_atime;
+    quint16 mshort;
+    if (read(fd, &mshort, 2) != 2)
+        return -EIO;
+    attr.mst_nlink = (nlink_t) ntohs(mshort);
+    if (read(fd, &mshort, 2) != 2)
+        return -EIO;
+    attr.mst_mode = (mode_t) ntohs(mshort);
+    if (attr.mst_mode & SF_MODE_REGULARFILE)
+    {
+        if (read(fd, &addr, 4) != 4)
+            return -EIO;
+        attr.mst_size = (off_t) ntohl(addr);
+    }
+    return 0;
+}
+
+int MyFS::myTruncate(quint32 addr, off_t newsize)
+{
+#if READONLY_FS
+    Q_UNUSED(addr);
+    Q_UNUSED(newsize);
+    return -EROFS;
+#else
+    quint32 block_size, next_block, file_size, mytime;
+    if (newsize > 0xFFFFFFFFL)
+        return -EINVAL;
+    if (lseek(fd, addr, SEEK_SET) != addr)
+        return -EIO;
+    if (read(fd, &block_size, 4) != 4)
+        return -EIO;
+    if (read(fd, &next_block, 4) != 4)
+        return -EIO;
+    mytime = htonl(time(0));
+    if (write(fd, &mytime, 4) != 4)
+        return -EIO;
+    if (lseek(fd, 4, SEEK_CUR) == SEEK_ERROR)
+        return -EIO;
+    if (read(fd, &file_size, 4) != 4)
+        return -EIO;
+    file_size = ntohl(file_size);
+    if (file_size == newsize)
+        return 0;
+    if (file_size < newsize)
+    {
+        /* We have to increase the size of the file, by appending zeros at the end */
+        if (lseek(fd, -4, SEEK_CUR) == SEEK_ERROR)
+            return -EIO;
+        quint32 mynewsize = (quint32) newsize;
+        mynewsize = htonl(mynewsize);
+        if (write(fd, &mynewsize, 4) != 4)
+            return -EIO;
+        bool isFistBlock = true;
+        block_size = ntohl(block_size) - 20;
+        while (block_size < file_size)
+        {
+            file_size -= block_size;
+            newsize -= block_size;
+            if (!next_block)
+                return -EIO; /* Corrupted data */
+            next_block = ntohl(next_block);
+            if (lseek(fd, next_block, SEEK_SET) != next_block)
+                return -EIO;
+            addr = next_block;
+            if (read(fd, &block_size, 4) != 4)
+                return -EIO;
+            isFistBlock = false;
+            block_size = ntohl(block_size) - 8;
+            if (read(fd, &next_block, 4) != 4)
+                return -EIO;
+        }
+        memset(str_buffer, 0, 0x100);
+        if (block_size > file_size)
+        {
+            if (lseek(fd, addr + (isFistBlock ? 20 : 8) + file_size, SEEK_SET) == SEEK_ERROR)
+                return -EIO;
+            if (!myWriteB(qMin(block_size - file_size, newsize - file_size)))
+                return -EIO;
+        }
+        while (newsize > block_size)
+        {
+            newsize -= block_size;
+            if (!next_block)
+            {
+                int ret_value = getBlock(newsize + 8, next_block);
+                if ((ret_value != 0) && (ret_value != -ENOSPC))
+                    return ret_value;
+                if (ret_value == -ENOSPC)
+                {
+                    if (next_block <= 8)
+                        return -ENOSPC;
+                    block_size = next_block - 8;
+                    ret_value = getBlock(next_block, next_block);
+                    if (ret_value != 0)
+                        return ret_value;
+                } else {
+                    block_size = newsize;
+                }
+                if (lseek(fd, addr + 4, SEEK_SET) == SEEK_ERROR)
+                    return -EIO;
+                addr = next_block;
+                next_block = htonl(next_block);
+                if (write(fd, &next_block, 4) != 4)
+                    return -EIO;
+                next_block = 0;
+                if (lseek(fd, addr + 8, SEEK_SET) == SEEK_ERROR)
+                    return -EIO;
+            } else {
+                addr = ntohl(next_block);
+                if (lseek(fd, addr, SEEK_SET) == SEEK_ERROR)
+                    return -EIO;
+                if (read(fd, &block_size, 4) != 4)
+                    return -EIO;
+                block_size = ntohl(block_size);
+                if (read(fd, &next_block, 4) != 4)
+                    return -EIO;
+            }
+            if (!myWriteB(qMin(block_size, newsize)))
+                return -EIO;
+        }
+        return 0;
+    } else {
+        /* We have to reduce the size of the file */
+        if (lseek(fd, -4, SEEK_CUR) == SEEK_ERROR)
+            return -EIO;
+        quint32 mynewsize = (quint32) newsize;
+        mynewsize = htonl(mynewsize);
+        if (write(fd, &mynewsize, 4) != 4)
+            return -EIO;
+        if (!next_block)
+            return 0;
+        next_block = ntohl(next_block);
+        newsize -= ntohl(block_size) - 20;
+        while (newsize > 0)
+        {
+            if (lseek(fd, next_block, SEEK_SET) != next_block)
+                return -EIO;
+            addr = next_block;
+            if (read(fd, &block_size, 4) != 4)
+                return -EIO;
+            if (read(fd, &next_block, 4) != 4)
+                return -EIO;
+            if (!next_block)
+                return 0;
+            next_block = ntohl(next_block);
+            newsize -= ntohl(block_size) - 8;
+        }
+        addr += 4;
+        if (lseek(fd, addr, SEEK_SET) != addr)
+            return -EIO;
+        addr = 0;
+        if (write(fd, &addr, 4) != 4)
+            return -EIO;
+        return freeBlocks(next_block);
+    }
+#endif /* READONLY_FS */
+}
+
+bool MyFS::myWriteB(quint32 size)
+{
+    while (size > 0x100)
+    {
+        if (write(fd, str_buffer, 0x100) != 0x100)
+            return false;
+        size -= 0x100;
+    }
+    return (write(fd, str_buffer, size) == size);
+}
+
 char *MyFS::convStr(const QString &str)
 {
     char *result = new char[str.length() + 1];
@@ -704,8 +894,52 @@ char *MyFS::convStr(const QString &str)
     return result;
 }
 
+/* Allocates some blocks (linked together), puts the address of the first one into addr and returns 0 on success. */
+int MyFS::getBlocks(quint32 size, quint32 &addr)
+{
+    Q_ASSERT(size > 0);
+    int ret_value;
+    quint32 next_block = 0;
+    while (true)
+    {
+        ret_value = getBlock(size + 8, addr);
+        if ((ret_value != 0) && (ret_value != -ENOSPC))
+            return ret_value;
+        if (ret_value == 0)
+        {
+            if (next_block)
+            {
+                if (lseek(fd, -4, SEEK_CUR) != -SEEK_ERROR)
+                    return -EIO;
+                if (write(fd, &next_block, 4) != 4)
+                    return -EIO;
+            }
+            return 0;
+        }
+        if (addr <= 8)
+        {
+            if (next_block)
+                freeBlocks(next_block);
+            return -ENOSPC;
+        }
+        size -= addr - 8;
+        ret_value = getBlock(addr, addr);
+        if (ret_value != 0)
+            return ret_value;
+        if (next_block)
+        {
+            if (lseek(fd, -4, SEEK_CUR) != -SEEK_ERROR)
+                return -EIO;
+            if (write(fd, &next_block, 4) != 4)
+                return -EIO;
+        }
+        next_block = htonl(addr);
+    }
+}
+
 /* Allocates the block, writes its size in the first 4 bytes, 0 on the 4 next bytes, puts its address into addr and returns 0 on success.
-    In this case, fd will point to the 9-th byte of that block at the end of the call. */
+    In this case, fd will point to the 9-th byte of that block at the end of the call.
+    In the case it returns -ENOSPC, addr will contain the maximum free block size. */
 int MyFS::getBlock(quint32 size, quint32 &addr)
 {
 #if READONLY_FS
@@ -713,9 +947,13 @@ int MyFS::getBlock(quint32 size, quint32 &addr)
     Q_UNUSED(addr);
     return -EROFS;
 #else
+    Q_ASSERT(size > 0);
     quint32 currentAddr = first_blank, refAddr = 4, bsize;
+    addr = 0;
     while (true)
     {
+        if (!currentAddr)
+            return -ENOSPC;
         if (lseek(fd, currentAddr, SEEK_SET) != currentAddr)
             return -EIO;
         if (read(fd, &bsize, 4) != 4)
@@ -757,6 +995,9 @@ int MyFS::getBlock(quint32 size, quint32 &addr)
                     return -EIO;
             }
             return 0;
+        } else {
+            if (bsize > addr)
+                addr = bsize;
         }
         refAddr = currentAddr + 4;
         if (read(fd, &currentAddr, 4) != 4)

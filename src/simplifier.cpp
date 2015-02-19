@@ -25,9 +25,9 @@ lString toLString(const char *str)
 }
 
 #ifndef QT_NO_DEBUG
-#define dispLog(...) fprintf(stderr, __VA_ARGS__);
+#define dispLog(...) fprintf(stderr, __VA_ARGS__)
 #else
-#define dispLog(...) /* NOP */
+#define dispLog(...) qt_noop()
 #endif
 
 int s_getattr(const char *path, struct stat *statbuf)
@@ -318,6 +318,8 @@ int s_create(const char *path, mode_t mode, fuse_file_info *fi)
 int s_ftruncate(const char *path, off_t offset, fuse_file_info *fi)
 {
     Q_UNUSED(path);
+    if (offset < 0)
+        return -EINVAL;
     return (QSimpleFuse::_instance)->sFTruncate(fi->fh, offset);
 }
 
