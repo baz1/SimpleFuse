@@ -43,11 +43,19 @@ struct OpenFile
 {
     quint32 nodeAddr;
     quint32 partAddr; /* Only used in regular files */
+    quint32 partLength; /* Only used in regular files */
     quint32 nextAddr;
     quint32 currentAddr;
     quint32 partOffset; /* Only used in regular files */
+    quint32 fileLength; /* Only used in regular files */
+    quint8 flags; /* Only used in regular files (see constants below) */
     bool isRegular;
 };
+
+#define OPEN_FILE_FLAGS_PREAD    1
+#define OPEN_FILE_FLAGS_PWRITE   2
+#define OPEN_FILE_FLAGS_NOATIME  4
+#define OPEN_FILE_FLAGS_MODIFIED 8
 
 class MyFS : public QSimpleFuse
 {
@@ -63,6 +71,7 @@ public:
     int sChMod(const lString &pathname, mode_t mst_mode);
     int sTruncate(const lString &pathname, off_t newsize);
     int sUTime(const lString &pathname, time_t mst_atime, time_t mst_mtime);
+    int sOpen(const lString &pathname, int flags, int &fd);
     int sOpenDir(const lString &pathname, int &fd);
     int sReadDir(int fd, char *&name);
     int sCloseDir(int fd);

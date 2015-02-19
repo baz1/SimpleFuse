@@ -616,6 +616,97 @@ int MyFS::sUTime(const lString &pathname, time_t mst_atime, time_t mst_mtime)
 #endif /* READONLY_FS */
 }
 
+int MyFS::sOpen(const lString &pathname, int flags, int &fd)
+{
+    if (this->fd < 0) return -EIO;
+#if READONLY_FS
+    if (flags & (O_WRONLY | O_RDWR))
+        return -EROFS;
+#endif /* READONLY_FS */
+    OpenFile myFile;
+    lString shallowCopy = pathname;
+    int ret_value = getAddress(shallowCopy, myFile.nodeAddr);
+    if (ret_value != 0)
+        return ret_value;
+    if (lseek(this->fd, myFile.nodeAddr, SEEK_SET) != myFile.nodeAddr)
+        return -EIO;
+    if (read(this->fd, &myFile.partLength, 4) != 4)
+        return -EIO;
+    if (read(this->fd, &myFile.nextAddr, 4) != 4)
+        return -EIO;
+    if (lseek(this->fd, 6, SEEK_CUR) == SEEK_ERROR)
+        return -EIO;
+    quint16 mshort;
+    if (read(this->fd, &mshort, 2) != 2)
+        return -EIO;
+    mshort = ntohs(mshort);
+    if (mshort & SF_MODE_DIRECTORY)
+        return -EISDIR;
+    myFile.flags = (flags & O_NOATIME) ? OPEN_FILE_FLAGS_NOATIME : 0;
+    if (!(flags & O_WRONLY))
+    {
+        myFile.flags |= OPEN_FILE_FLAGS_PREAD;
+        if (!(mshort & S_IRUSR))
+            return -EACCES;
+    }
+    if (flags & (O_WRONLY | O_RDWR))
+    {
+        myFile.flags |= OPEN_FILE_FLAGS_PWRITE;
+        if (!(mshort & S_IWUSR))
+            return -EACCES;
+    } else {
+        if (flags & O_TRUNC)
+            return -EACCES;
+    }
+    if (flags & O_TRUNC)
+    {
+        myFile.fileLength = 0;
+        if (write(this->fd, &myFile.fileLength, 4) != 4)
+            return -EIO;
+    } else {
+        if (read(this->fd, &myFile.fileLength, 4) != 4)
+            return -EIO;
+        myFile.fileLength = ntohl(myFile.fileLength);
+    }
+    fd = 0;
+    while ((fd < openFiles.count()) && openFiles.at(fd).nodeAddr) ++fd;
+    myFile.partLength = ntohl(myFile.partLength);
+    myFile.nextAddr = ntohl(myFile.nextAddr);
+    myFile.partAddr = myFile.nodeAddr;
+    myFile.partOffset = 0;
+    myFile.isRegular = true;
+    if ((flags & O_APPEND) && !(flags & O_TRUNC))
+    {
+        quint32 available = myFile.partLength - 20;
+        while (available <= (myFile.fileLength - myFile.partOffset))
+        {
+            myFile.partOffset += available;
+            if (lseek(this->fd, myFile.nextAddr, SEEK_SET) != myFile.nextAddr)
+                return -EIO;
+            myFile.partAddr = myFile.nextAddr;
+            if (read(this->fd, &myFile.partLength, 4) != 4)
+                return -EIO;
+            if (read(this->fd, &myFile.nextAddr, 4) != 4)
+                return -EIO;
+            myFile.partLength = ntohl(myFile.partLength);
+            myFile.nextAddr = ntohl(myFile.nextAddr);
+            available = myFile.partLength - 8;
+        }
+        myFile.currentAddr = myFile.partAddr + ((myFile.partAddr == myFile.nodeAddr) ? 20 : 8) + (myFile.fileLength - myFile.partOffset);
+    } else {
+        myFile.currentAddr = myFile.nodeAddr + 20;
+    }
+    if (fd == openFiles.count())
+    {
+        if (fd > MAX_OPEN_FILES)
+            return -ENFILE;
+        openFiles.append(myFile);
+    } else {
+        openFiles[fd] = myFile;
+    }
+    return 0;
+}
+
 int MyFS::sOpenDir(const lString &pathname, int &fd)
 {
     if (this->fd < 0) return -EIO;
@@ -628,14 +719,16 @@ int MyFS::sOpenDir(const lString &pathname, int &fd)
         return -EIO;
     if (read(this->fd, &myDir.nextAddr, 4) != 4)
         return -EIO;
-    if (read(this->fd, str_buffer, 6) != 6)
+    if (lseek(this->fd, 6, SEEK_CUR) == SEEK_ERROR)
         return -EIO;
     quint16 mshort;
-    if (read(this->fd, &mshort, 4) != 4)
+    if (read(this->fd, &mshort, 2) != 2)
         return -EIO;
     mshort = ntohs(mshort);
     if (mshort & SF_MODE_REGULARFILE)
         return -ENOTDIR;
+    if (!(mshort & S_IRUSR))
+        return -EACCES;
     fd = 0;
     while ((fd < openFiles.count()) && openFiles.at(fd).nodeAddr) ++fd;
     myDir.currentAddr = myDir.nodeAddr + 16;
@@ -792,7 +885,7 @@ int MyFS::myTruncate(quint32 addr, off_t newsize)
         {
             if (lseek(fd, addr + (isFistBlock ? 20 : 8) + file_size, SEEK_SET) == SEEK_ERROR)
                 return -EIO;
-            if (!myWriteB(qMin(block_size - file_size, newsize - file_size)))
+            if (!myWriteB(qMin(block_size - file_size, (quint32) (newsize - file_size))))
                 return -EIO;
         }
         while (newsize > block_size)
@@ -833,7 +926,7 @@ int MyFS::myTruncate(quint32 addr, off_t newsize)
                 if (read(fd, &next_block, 4) != 4)
                     return -EIO;
             }
-            if (!myWriteB(qMin(block_size, newsize)))
+            if (!myWriteB(qMin(block_size, (quint32) newsize)))
                 return -EIO;
         }
         return 0;
