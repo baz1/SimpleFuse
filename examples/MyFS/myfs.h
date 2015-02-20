@@ -72,6 +72,7 @@ public:
     int sTruncate(const lString &pathname, off_t newsize);
     int sUTime(const lString &pathname, time_t mst_atime, time_t mst_mtime);
     int sOpen(const lString &pathname, int flags, int &fd);
+    int sRead(int fd, void *buf, int count, off_t offset);
     int sClose(int fd);
     int sOpenDir(const lString &pathname, int &fd);
     int sReadDir(int fd, char *&name);
@@ -79,6 +80,7 @@ public:
 private:
     int myGetAttr(quint32 addr, sAttr &attr);
     int myTruncate(quint32 addr, off_t newsize);
+    bool setPosition(OpenFile &file, quint32 offset);
     bool myWriteB(quint32 size);
     static char *convStr(const QString &str);
     int getBlocks(quint32 size, quint32 &addr);

@@ -692,7 +692,7 @@ int MyFS::sOpen(const lString &pathname, int flags, int &fd)
             myFile.nextAddr = ntohl(myFile.nextAddr);
             available = myFile.partLength - 8;
         }
-        myFile.currentAddr = myFile.partAddr + ((myFile.partAddr == myFile.nodeAddr) ? 20 : 8) + (myFile.fileLength - myFile.partOffset);
+        myFile.currentAddr = myFile.partAddr + (myFile.partOffset ? 8 : 20) + (myFile.fileLength - myFile.partOffset);
     } else {
         myFile.currentAddr = myFile.nodeAddr + 20;
     }
@@ -705,6 +705,57 @@ int MyFS::sOpen(const lString &pathname, int flags, int &fd)
         openFiles[fd] = myFile;
     }
     return 0;
+}
+
+int MyFS::sRead(int fd, void *buf, int count, off_t offset)
+{
+    if ((fd >= openFiles.count()) || (!openFiles.at(fd).nodeAddr) || (!openFiles.at(fd).isRegular))
+        return -EBADF;
+    OpenFile &myFile = openFiles[fd];
+    if (!(myFile.flags & OPEN_FILE_FLAGS_PREAD))
+        return -EBADF;
+    if (offset > myFile.fileLength)
+        return -EOVERFLOW;
+    if (offset + count > myFile.fileLength)
+        count = myFile.fileLength - offset;
+    if (!setPosition(myFile, offset))
+        return -EIO;
+    quint32 toread = qMin((quint32) count, myFile.partLength - (myFile.currentAddr - myFile.partAddr));
+    if (read(this->fd, buf, toread) != toread)
+        return -EIO;
+    if (toread == count)
+    {
+        myFile.currentAddr += count;
+        return 0;
+    }
+    reinterpret_cast<quint8*>(buf) += toread;
+    count -= toread;
+    quint32 available = myFile.partLength - (myFile.partOffset ? 8 : 20);
+    while (true)
+    {
+        myFile.partOffset += available;
+        if (lseek(this->fd, myFile.nextAddr, SEEK_SET) != myFile.nextAddr)
+            return -EIO;
+        myFile.partAddr = myFile.nextAddr;
+        if (read(this->fd, &myFile.partLength, 4) != 4)
+            return -EIO;
+        if (read(this->fd, &myFile.nextAddr, 4) != 4)
+            return -EIO;
+        myFile.partLength = ntohl(myFile.partLength);
+        myFile.nextAddr = ntohl(myFile.nextAddr);
+        available = myFile.partLength - 8;
+        toread = qMin((quint32) count, available);
+        if (read(this->fd, buf, toread) != toread)
+            return -EIO;
+        if (toread == count)
+        {
+            myFile.currentAddr = myFile.partAddr + 8 + count;
+            return 0;
+        }
+        reinterpret_cast<quint8*>(buf) += toread;
+        count -= toread;
+        available = myFile.partLength - 8;
+    }
 }
 
 int MyFS::sClose(int fd)
@@ -984,6 +1035,43 @@ int MyFS::myTruncate(quint32 addr, off_t newsize)
         return freeBlocks(next_block);
     }
 #endif /* READONLY_FS */
+}
+
+bool MyFS::setPosition(OpenFile &file, quint32 offset)
+{
+    if (offset < file.partOffset)
+    {
+        /* Scan the file from the beginning */
+        file.partAddr = file.nodeAddr;
+        if (lseek(fd, file.nodeAddr, SEEK_SET) != file.nodeAddr)
+            return false;
+        if (read(fd, &file.partLength, 4) != 4)
+            return false;
+        if (read(fd, &file.nextAddr, 4) != 4)
+            return false;
+        file.partLength = ntohl(file.partLength);
+        file.nextAddr = ntohl(file.nextAddr);
+        file.currentAddr = file.nodeAddr + 20;
+        file.partOffset = 0;
+    }
+    /* Scan the file until the right offset range */
+    quint32 available = file.partLength - (file.partOffset ? 8 : 20);
+    while (offset >= file.partOffset + available)
+    {
+        file.partOffset += available;
+        if (lseek(this->fd, file.nextAddr, SEEK_SET) != file.nextAddr)
+            return false;
+        file.partAddr = file.nextAddr;
+        if (read(this->fd, &file.partLength, 4) != 4)
+            return false;
+        if (read(this->fd, &file.nextAddr, 4) != 4)
+            return false;
+        file.partLength = ntohl(file.partLength);
+        file.nextAddr = ntohl(file.nextAddr);
+        available = file.partLength - 8;
+    }
+    file.currentAddr = file.partAddr + (file.partOffset ? 8 : 20) + (offset - file.partOffset);
+    return true;
 }
 
 bool MyFS::myWriteB(quint32 size)
