@@ -201,7 +201,7 @@ int s_write(const char *path, const char *buf, size_t size, off_t offset, fuse_f
     return (QSimpleFuse::_instance)->sWrite(fi->fh, buf, (int) size, offset);
 }
 
-int s_statvfs(const char *path, statvfs *statv)
+int s_statvfs(const char *path, struct statvfs *statv)
 {
     Q_UNUSED(path);
     quint64 bSize, bFree;
