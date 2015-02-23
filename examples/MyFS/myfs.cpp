@@ -814,6 +814,13 @@ int MyFS::sWrite(int fd, const void *buf, int count, off_t offset)
     }
 }
 
+int MyFS::sSync(int fd)
+{
+    if ((fd >= openFiles.count()) || (!openFiles.at(fd).nodeAddr) || (!openFiles.at(fd).isRegular))
+        return -EBADF;
+    return 0;
+}
+
 int MyFS::sClose(int fd)
 {
     if ((fd >= openFiles.count()) || (!openFiles.at(fd).nodeAddr) || (!openFiles.at(fd).isRegular))

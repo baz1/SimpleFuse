@@ -74,6 +74,7 @@ public:
     int sOpen(const lString &pathname, int flags, int &fd);
     int sRead(int fd, void *buf, int count, off_t offset);
     int sWrite(int fd, const void *buf, int count, off_t offset);
+    int sSync(int fd);
     int sClose(int fd);
     int sOpenDir(const lString &pathname, int &fd);
     int sReadDir(int fd, char *&name);
