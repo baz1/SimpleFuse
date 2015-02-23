@@ -79,6 +79,7 @@ public:
     int sOpenDir(const lString &pathname, int &fd);
     int sReadDir(int fd, char *&name);
     int sCloseDir(int fd);
+    int sAccess(const lString &pathname, int mode);
 private:
     int myGetAttr(quint32 addr, sAttr &attr);
     int myTruncate(quint32 addr, off_t newsize);

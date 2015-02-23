@@ -934,6 +934,35 @@ int MyFS::sCloseDir(int fd)
     return 0;
 }
 
+int MyFS::sAccess(const lString &pathname, int mode)
+{
+    if (fd < 0) return -EIO;
+    quint32 addr;
+    lString shallowCopy = pathname;
+    int ret_value = getAddress(shallowCopy, addr);
+    if (ret_value != 0)
+        return ret_value;
+    if (mode == F_OK)
+        return 0;
+#if READONLY_FS
+    if (mode & W_OK)
+        return -EROFS;
+#endif /* READONLY_FS */
+    if (lseek(fd, addr + 14, SEEK_SET) == SEEK_ERROR)
+        return -EIO;
+    quint16 mshort;
+    if (read(fd, &mshort, 2) != 2)
+        return -EIO;
+    mshort = ntohs(mshort);
+    if ((mode & R_OK) && (!(mshort & S_IRUSR)))
+        return -EACCES;
+    if ((mode & W_OK) && (!(mshort & S_IWUSR)))
+        return -EACCES;
+    if ((mode & X_OK) && (!(mshort & S_IXUSR)))
+        return -EACCES;
+    return 0;
+}
+
 int MyFS::myGetAttr(quint32 addr, sAttr &attr)
 {
     addr += 8;
