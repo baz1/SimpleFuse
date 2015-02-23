@@ -416,6 +416,12 @@ int MyFS::sRmFile(const lString &pathname, bool isDir)
             off_t nextEntry = lseek(fd, 0, SEEK_CUR);
             if (nextEntry == SEEK_ERROR)
                 return -EIO;
+            /* Check if the file is opened. */
+            for (int i = 0; i < openFiles.count(); ++i)
+            {
+                if (openFiles.at(i).nodeAddr == addr)
+                    return -EBUSY;
+            }
             /* Check if isDir has the right value. */
             if (lseek(fd, addr + 14, SEEK_SET) != addr + 14)
                 return -EIO;
@@ -730,6 +736,7 @@ int MyFS::sRead(int fd, void *buf, int count, off_t offset)
         return count;
     }
     buf = (void*) (((quint8*) buf) + toread);
+    int original_count = count;
     count -= toread;
     quint32 available = myFile.partLength - (myFile.partOffset ? 8 : 20);
     while (true)
@@ -751,7 +758,7 @@ int MyFS::sRead(int fd, void *buf, int count, off_t offset)
         if (toread == (quint32) count)
         {
             myFile.currentAddr = myFile.partAddr + 8 + count;
-            return count;
+            return original_count;
         }
         buf = (void*) (((quint8*) buf) + toread);
         count -= toread;
@@ -769,8 +776,7 @@ int MyFS::sWrite(int fd, const void *buf, int count, off_t offset)
         return -EBADF;
     if (offset + count > myFile.fileLength)
     {
-        myFile.fileLength = offset + count;
-        int ret_value = myTruncate(myFile.nodeAddr, myFile.fileLength);
+        int ret_value = myTruncate(myFile.nodeAddr, offset + count);
         if (ret_value != 0)
             return ret_value;
     }
@@ -787,6 +793,7 @@ int MyFS::sWrite(int fd, const void *buf, int count, off_t offset)
     }
     quint8 *mbuf = (quint8*) buf;
     mbuf += towrite;
+    int original_count = count;
     count -= towrite;
     quint32 available = myFile.partLength - (myFile.partOffset ? 8 : 20);
     while (true)
@@ -808,7 +815,7 @@ int MyFS::sWrite(int fd, const void *buf, int count, off_t offset)
         if (towrite == (quint32) count)
         {
             myFile.currentAddr = myFile.partAddr + 8 + count;
-            return count;
+            return original_count;
         }
         mbuf += towrite;
         count -= towrite;
@@ -1023,6 +1030,7 @@ int MyFS::myTruncate(quint32 addr, off_t newsize)
     return -EROFS;
 #else
     quint32 block_size, next_block, file_size, mytime;
+    quint32 modifNodeAddr = addr, modifNodeSize = (quint32) newsize, modifNodePart = 0;
     if (newsize > 0xFFFFFFFFL)
         return -EINVAL;
     if (lseek(fd, addr, SEEK_SET) != addr)
@@ -1099,6 +1107,8 @@ int MyFS::myTruncate(quint32 addr, off_t newsize)
                 if (lseek(fd, addr + 4, SEEK_SET) == SEEK_ERROR)
                     return -EIO;
                 addr = next_block;
+                if (!modifNodePart)
+                    modifNodePart = next_block;
                 next_block = htonl(next_block);
                 if (write(fd, &next_block, 4) != 4)
                     return -EIO;
@@ -1117,6 +1127,16 @@ int MyFS::myTruncate(quint32 addr, off_t newsize)
             }
             if (!myWriteB(qMin(block_size, (quint32) newsize)))
                 return -EIO;
+        }
+        /* Update the file descriptors */
+        for (int i = 0; i < openFiles.count(); ++i)
+        {
+            if (openFiles.at(i).nodeAddr == modifNodeAddr)
+            {
+                if (modifNodePart && (!openFiles.at(i).nextAddr))
+                    openFiles[i].nextAddr = modifNodePart;
+                openFiles[i].fileLength = modifNodeSize;
+            }
         }
         return 0;
     } else {
@@ -1151,7 +1171,37 @@ int MyFS::myTruncate(quint32 addr, off_t newsize)
         addr = 0;
         if (write(fd, &addr, 4) != 4)
             return -EIO;
-        return freeBlocks(next_block);
+        int ret_value = freeBlocks(next_block);
+        if (ret_value != 0)
+            return ret_value;
+        /* Update the file descriptors */
+        for (int i = 0; i < openFiles.count(); ++i)
+        {
+            if (openFiles.at(i).nodeAddr == modifNodeAddr)
+            {
+                if (openFiles.at(i).partOffset >= modifNodeSize)
+                {
+                    openFiles[i].partAddr = openFiles[i].nodeAddr;
+                    openFiles[i].currentAddr = openFiles[i].nodeAddr + 20;
+                    if (lseek(fd, modifNodeAddr, SEEK_SET) != modifNodeAddr)
+                        return -EIO;
+                    quint32 &pLen = openFiles[i].partLength;
+                    quint32 &pNext = openFiles[i].nextAddr;
+                    if (read(fd, &pLen, 4) != 4)
+                        return -EIO;
+                    pLen = ntohl(pLen);
+                    if (read(fd, &pNext, 4) != 4)
+                        return -EIO;
+                    pNext = ntohl(pNext);
+                    openFiles[i].partOffset = 0;
+                } else if (openFiles.at(i).partOffset + openFiles.at(i).partLength >= modifNodeSize)
+                {
+                    openFiles[i].nextAddr = 0;
+                }
+                openFiles[i].fileLength = modifNodeSize;
+            }
+        }
+        return 0;
     }
 #endif /* READONLY_FS */
 }
