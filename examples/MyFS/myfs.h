@@ -73,6 +73,7 @@ public:
     int sUTime(const lString &pathname, time_t mst_atime, time_t mst_mtime);
     int sOpen(const lString &pathname, int flags, int &fd);
     int sRead(int fd, void *buf, int count, off_t offset);
+    int sWrite(int fd, const void *buf, int count, off_t offset);
     int sClose(int fd);
     int sOpenDir(const lString &pathname, int &fd);
     int sReadDir(int fd, char *&name);

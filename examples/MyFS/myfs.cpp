@@ -723,12 +723,12 @@ int MyFS::sRead(int fd, void *buf, int count, off_t offset)
     quint32 toread = qMin((quint32) count, myFile.partLength - (myFile.currentAddr - myFile.partAddr));
     if (read(this->fd, buf, toread) != toread)
         return -EIO;
-    if (toread == count)
+    if (toread == (quint32) count)
     {
         myFile.currentAddr += count;
-        return 0;
+        return count;
     }
-    reinterpret_cast<quint8*>(buf) += toread;
+    buf = (void*) (((quint8*) buf) + toread);
     count -= toread;
     quint32 available = myFile.partLength - (myFile.partOffset ? 8 : 20);
     while (true)
@@ -747,13 +747,69 @@ int MyFS::sRead(int fd, void *buf, int count, off_t offset)
         toread = qMin((quint32) count, available);
         if (read(this->fd, buf, toread) != toread)
             return -EIO;
-        if (toread == count)
+        if (toread == (quint32) count)
         {
             myFile.currentAddr = myFile.partAddr + 8 + count;
-            return 0;
+            return count;
         }
-        reinterpret_cast<quint8*>(buf) += toread;
+        buf = (void*) (((quint8*) buf) + toread);
         count -= toread;
+        available = myFile.partLength - 8;
+    }
+}
+
+int MyFS::sWrite(int fd, const void *buf, int count, off_t offset)
+{
+    if ((fd >= openFiles.count()) || (!openFiles.at(fd).nodeAddr) || (!openFiles.at(fd).isRegular))
+        return -EBADF;
+    OpenFile &myFile = openFiles[fd];
+    if (!(myFile.flags & OPEN_FILE_FLAGS_PWRITE))
+        return -EBADF;
+    if (offset + count > myFile.fileLength)
+    {
+        myFile.fileLength = offset + count;
+        int ret_value = myTruncate(myFile.nodeAddr, myFile.fileLength);
+        if (ret_value != 0)
+            return ret_value;
+    }
+    if (!setPosition(myFile, offset))
+        return -EIO;
+    quint32 towrite = qMin((quint32) count, myFile.partLength - (myFile.currentAddr - myFile.partAddr));
+    if (write(this->fd, buf, towrite) != towrite)
+        return -EIO;
+    myFile.flags |= OPEN_FILE_FLAGS_MODIFIED;
+    if (towrite == (quint32) count)
+    {
+        myFile.currentAddr += count;
+        return count;
+    }
+    quint8 *mbuf = (quint8*) buf;
+    mbuf += towrite;
+    count -= towrite;
+    quint32 available = myFile.partLength - (myFile.partOffset ? 8 : 20);
+    while (true)
+    {
+        myFile.partOffset += available;
+        if (lseek(this->fd, myFile.nextAddr, SEEK_SET) != myFile.nextAddr)
+            return -EIO;
+        myFile.partAddr = myFile.nextAddr;
+        if (read(this->fd, &myFile.partLength, 4) != 4)
+            return -EIO;
+        if (read(this->fd, &myFile.nextAddr, 4) != 4)
+            return -EIO;
+        myFile.partLength = ntohl(myFile.partLength);
+        myFile.nextAddr = ntohl(myFile.nextAddr);
+        available = myFile.partLength - 8;
+        towrite = qMin((quint32) count, available);
+        if (write(this->fd, mbuf, towrite) != towrite)
+            return -EIO;
+        if (towrite == (quint32) count)
+        {
+            myFile.currentAddr = myFile.partAddr + 8 + count;
+            return count;
+        }
+        mbuf += towrite;
+        count -= towrite;
         available = myFile.partLength - 8;
     }
 }
@@ -765,10 +821,10 @@ int MyFS::sClose(int fd)
     OpenFile *file = &openFiles[fd];
     if (file->flags & OPEN_FILE_FLAGS_MODIFIED)
     {
-        if (lseek(this->fd, file->nodeAddr + 16, SEEK_SET) == SEEK_ERROR)
+        if (lseek(this->fd, file->nodeAddr + 8, SEEK_SET) == SEEK_ERROR)
             return -EIO;
-        file->fileLength = htonl(file->fileLength);
-        if (write(this->fd, &file->fileLength, 4) != 4)
+        quint32 mytime = htonl(time(0));
+        if (write(this->fd, &mytime, 4) != 4)
             return -EIO;
     }
     file->nodeAddr = 0;
