@@ -198,7 +198,7 @@ int MyFS::sMkFile(const lString &pathname, mode_t mst_mode)
     quint32 createDate = htonl(time(0)), addr;
     if (write(fd, &createDate, 4) != 4)
         return -EIO;
-    mshort = htons(2);
+    mshort = htons((mst_mode & SF_MODE_DIRECTORY) ? 2 : 1);
     if (write(fd, &mshort, 2) != 2)
         return -EIO;
     mshort = htons(mst_mode);
@@ -1178,18 +1178,20 @@ bool MyFS::setPosition(OpenFile &file, quint32 offset)
     while (offset >= file.partOffset + available)
     {
         file.partOffset += available;
-        if (lseek(this->fd, file.nextAddr, SEEK_SET) != file.nextAddr)
+        if (lseek(fd, file.nextAddr, SEEK_SET) != file.nextAddr)
             return false;
         file.partAddr = file.nextAddr;
-        if (read(this->fd, &file.partLength, 4) != 4)
+        if (read(fd, &file.partLength, 4) != 4)
             return false;
-        if (read(this->fd, &file.nextAddr, 4) != 4)
+        if (read(fd, &file.nextAddr, 4) != 4)
             return false;
         file.partLength = ntohl(file.partLength);
         file.nextAddr = ntohl(file.nextAddr);
         available = file.partLength - 8;
     }
     file.currentAddr = file.partAddr + (file.partOffset ? 8 : 20) + (offset - file.partOffset);
+    if (lseek(fd, file.currentAddr, SEEK_SET) != file.currentAddr)
+        return -EIO;
     return true;
 }
 
