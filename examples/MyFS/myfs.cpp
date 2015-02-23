@@ -711,6 +711,7 @@ int MyFS::sRead(int fd, void *buf, int count, off_t offset)
 {
     if ((fd >= openFiles.count()) || (!openFiles.at(fd).nodeAddr) || (!openFiles.at(fd).isRegular))
         return -EBADF;
+    if (this->fd < 0) return -EIO;
     OpenFile &myFile = openFiles[fd];
     if (!(myFile.flags & OPEN_FILE_FLAGS_PREAD))
         return -EBADF;
@@ -762,6 +763,7 @@ int MyFS::sWrite(int fd, const void *buf, int count, off_t offset)
 {
     if ((fd >= openFiles.count()) || (!openFiles.at(fd).nodeAddr) || (!openFiles.at(fd).isRegular))
         return -EBADF;
+    if (this->fd < 0) return -EIO;
     OpenFile &myFile = openFiles[fd];
     if (!(myFile.flags & OPEN_FILE_FLAGS_PWRITE))
         return -EBADF;
@@ -828,6 +830,7 @@ int MyFS::sClose(int fd)
     OpenFile *file = &openFiles[fd];
     if (file->flags & OPEN_FILE_FLAGS_MODIFIED)
     {
+        if (this->fd < 0) return -EIO;
         if (lseek(this->fd, file->nodeAddr + 8, SEEK_SET) == SEEK_ERROR)
             return -EIO;
         quint32 mytime = htonl(time(0));
@@ -965,12 +968,18 @@ int MyFS::sAccess(const lString &pathname, int mode)
 
 int MyFS::sFTruncate(int fd, off_t newsize)
 {
+#if READONLY_FS
+    Q_UNUSED(fd);
+    Q_UNUSED(newsize);
+    return -EROFS;
+#else
     if ((fd >= openFiles.count()) || (!openFiles.at(fd).nodeAddr) || (!openFiles.at(fd).isRegular))
         return -EBADF;
     if (this->fd < 0) return -EIO;
     OpenFile *file = &openFiles[fd];
     file->fileLength = newsize;
     return myTruncate(file.nodeAddr, file.fileLength);
+#endif /* READONLY_FS */
 }
 
 int MyFS::sFGetAttr(int fd, sAttr &attr)
