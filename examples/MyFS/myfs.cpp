@@ -973,6 +973,14 @@ int MyFS::sFTruncate(int fd, off_t newsize)
     return myTruncate(file.nodeAddr, file.fileLength);
 }
 
+int MyFS::sFGetAttr(int fd, sAttr &attr)
+{
+    if ((fd >= openFiles.count()) || (!openFiles.at(fd).nodeAddr))
+        return -EBADF;
+    if (this->fd < 0) return -EIO;
+    return myGetAttr(openFiles.at(fd).nodeAddr, attr);
+}
+
 int MyFS::myGetAttr(quint32 addr, sAttr &attr)
 {
     addr += 8;
