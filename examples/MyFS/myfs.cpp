@@ -978,7 +978,7 @@ int MyFS::sFTruncate(int fd, off_t newsize)
     if (this->fd < 0) return -EIO;
     OpenFile *file = &openFiles[fd];
     file->fileLength = newsize;
-    return myTruncate(file.nodeAddr, file.fileLength);
+    return myTruncate(file->nodeAddr, file->fileLength);
 #endif /* READONLY_FS */
 }
 
