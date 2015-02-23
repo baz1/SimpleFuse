@@ -325,6 +325,26 @@ void QSimpleFuse::sDestroy()
 }
 
 /*!
+    Gets the size of the filesystem (number of bytes put in \a size) and its free space (number of bytes written in \a free).
+
+    Returns \c 0 on success, or one of these values on error:
+    \table
+        \header
+            \li Return value
+            \li Description
+        \row
+            \li -EIO
+            \li I/O error.
+    \endtable
+*/
+int QSimpleFuse::sGetSize(quint64 &size, quint64 &free)
+{
+    Q_UNUSED(size);
+    Q_UNUSED(free);
+    return -ENOSYS;
+}
+
+/*!
     Gets the file attributes of \a pathname and store them into \a attr (see "man 2 lstat").
 
     Returns \c 0 on success, or one of these values on error:

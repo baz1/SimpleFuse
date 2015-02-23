@@ -11,7 +11,7 @@
 
 struct PersistentData
 {
-    struct stat def_stat;
+    stat def_stat;
 };
 
 #define PERSDATA ((PersistentData*) fuse_get_context()->private_data)

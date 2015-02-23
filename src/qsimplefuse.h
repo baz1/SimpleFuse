@@ -42,6 +42,9 @@ public:
     /* Destroy */
     virtual void sDestroy();
 
+    /* Get the filesystem size and free size */
+    virtual int sGetSize(quint64 &size, quint64 &free);
+
     /* Get file attributes */
     virtual int sGetAttr(const lString &pathname, sAttr &attr);
 

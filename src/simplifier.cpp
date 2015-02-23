@@ -201,6 +201,30 @@ int s_write(const char *path, const char *buf, size_t size, off_t offset, fuse_f
     return (QSimpleFuse::_instance)->sWrite(fi->fh, buf, (int) size, offset);
 }
 
+int s_statvfs(const char *path, statvfs *statv)
+{
+    Q_UNUSED(path);
+    quint64 bSize, bFree;
+    int ret_value = (QSimpleFuse::_instance)->sGetSize(bSize, bFree);
+    if (ret_value < 0)
+        return ret_value;
+    if (bSize & 0x1FF)
+        bSize = (bSize >> 9) + 1;
+    else
+        bSize = bSize >> 9;
+    if (bFree & 0x1FF)
+        bFree = (bFree >> 9) + 1;
+    else
+        bFree = bFree >> 9;
+    statv->f_bsize = 0x200;
+    statv->f_frsize = 0x200;
+    statv->f_blocks = bSize;
+    statv->f_bfree = bFree;
+    statv->f_bavail = statv->f_bfree;
+    statv->f_namemax = STR_LEN_MAX;
+    return 0;
+}
+
 int s_flush(const char *path, fuse_file_info *fi)
 {
     Q_UNUSED(path);
@@ -361,6 +385,7 @@ void makeSimplifiedFuseOperations()
     s_oper.open = s_open;
     s_oper.read = s_read;
     s_oper.write = s_write;
+    s_oper.statfs = s_statvfs;
     s_oper.flush = s_flush;
     s_oper.release = s_release;
     s_oper.fsync = s_fsync;
