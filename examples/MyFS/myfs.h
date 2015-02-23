@@ -80,6 +80,7 @@ public:
     int sReadDir(int fd, char *&name);
     int sCloseDir(int fd);
     int sAccess(const lString &pathname, int mode);
+    int sFTruncate(int fd, off_t newsize);
 private:
     int myGetAttr(quint32 addr, sAttr &attr);
     int myTruncate(quint32 addr, off_t newsize);

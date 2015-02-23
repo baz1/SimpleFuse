@@ -963,6 +963,16 @@ int MyFS::sAccess(const lString &pathname, int mode)
     return 0;
 }
 
+int MyFS::sFTruncate(int fd, off_t newsize)
+{
+    if ((fd >= openFiles.count()) || (!openFiles.at(fd).nodeAddr) || (!openFiles.at(fd).isRegular))
+        return -EBADF;
+    if (this->fd < 0) return -EIO;
+    OpenFile *file = &openFiles[fd];
+    file->fileLength = newsize;
+    return myTruncate(file.nodeAddr, file.fileLength);
+}
+
 int MyFS::myGetAttr(quint32 addr, sAttr &attr)
 {
     addr += 8;
