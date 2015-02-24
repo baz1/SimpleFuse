@@ -7,6 +7,9 @@
 #ifndef __QSIMPLEFUSE_H__
 #define __QSIMPLEFUSE_H__
 
+/* Do we want to output the FUSE debug messages in DEBUG mode? */
+#define ALLOW_FULL_DEBUG 1
+
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <QString>

@@ -50,6 +50,9 @@
 
 #ifndef QT_NO_DEBUG
 #include <stdio.h>
+#define FULL_DEBUG ALLOW_FULL_DEBUG
+#else
+#define FULL_DEBUG 0
 #endif
 
 /*!
@@ -216,12 +219,22 @@ QSimpleFuse::QSimpleFuse(QString mountPoint, bool singlethreaded)
     /* Initialize fs */
     memset(&fs, 0, sizeof(fs));
     /* Recreating custom arguments */
+#if FULL_DEBUG
+    argc = singlethreaded ? 4 : 3;
+    argv = new char*[argc];
+    argv[0] = getCStrFromQStr(QCoreApplication::arguments().first());
+    argv[1] = getCStrFromQStr(mountPoint);
+    argv[2] = getCStrFromQStr("-d");
+    if (singlethreaded)
+        argv[3] = getCStrFromQStr("-s");
+#else
     argc = singlethreaded ? 3 : 2;
     argv = new char*[argc];
     argv[0] = getCStrFromQStr(QCoreApplication::arguments().first());
     argv[1] = getCStrFromQStr(mountPoint);
     if (singlethreaded)
         argv[2] = getCStrFromQStr("-s");
+#endif
     /* Parsing arguments */
     struct fuse_args args = FUSE_ARGS_INIT(argc, argv);
     int res = fuse_parse_cmdline(&args, &fs.mountpoint, &fs.multithreaded, &fs.foreground);
