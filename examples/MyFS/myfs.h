@@ -68,6 +68,7 @@ public:
     int sGetAttr(const lString &pathname, sAttr &attr);
     int sMkFile(const lString &pathname, mode_t mst_mode);
     int sRmFile(const lString &pathname, bool isDir);
+    int sMvFile(const lString &pathBefore, const lString &pathAfter);
     int sLink(const lString &pathFrom, const lString &pathTo);
     int sChMod(const lString &pathname, mode_t mst_mode);
     int sTruncate(const lString &pathname, off_t newsize);
@@ -84,7 +85,8 @@ public:
     int sFTruncate(int fd, off_t newsize);
     int sFGetAttr(int fd, sAttr &attr);
 private:
-    int myLink(quint32 file, const lString &pathname);
+    int myLink(quint32 file, const lString &pathname, quint32 *parentAddr = 0);
+    int myUnlink(const lString &pathname, bool &isDir, quint32 *nodeAddr = 0);
     int myGetAttr(quint32 addr, sAttr &attr);
     int myTruncate(quint32 addr, off_t newsize);
     bool setPosition(OpenFile &file, quint32 offset);
