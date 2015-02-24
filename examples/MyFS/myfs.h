@@ -65,6 +65,7 @@ public:
     static void createNewFilesystem(QString filename);
     void sInit();
     void sDestroy();
+    int sGetSize(quint64 &size, quint64 &free);
     int sGetAttr(const lString &pathname, sAttr &attr);
     int sMkFile(const lString &pathname, mode_t mst_mode);
     int sRmFile(const lString &pathname, bool isDir);

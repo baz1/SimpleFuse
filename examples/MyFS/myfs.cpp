@@ -127,6 +127,38 @@ void MyFS::sDestroy()
     }
 }
 
+int MyFS::sGetSize(quint64 &size, quint64 &free)
+{
+    if (fd < 0) return -EIO;
+    /* Get total size */
+    off_t length = lseek(fd, 0, SEEK_END);
+    if (length == SEEK_ERROR)
+        return -EIO;
+    size = (quint64) length;
+    /* Get free size */
+    free = 0;
+    if (first_blank)
+    {
+        quint32 current = first_blank, to_add;
+        while (true)
+        {
+            if (lseek(fd, current, SEEK_SET) != current)
+                return -EIO;
+            if (read(fd, &to_add, 4) != 4)
+                return -EIO;
+            to_add = ntohl(to_add);
+            if (to_add > 8)
+                free += to_add - 8;
+            if (read(fd, &current, 4) != 4)
+                return -EIO;
+            if (!current)
+                break;
+            current = ntohl(current);
+        }
+    }
+    return 0;
+}
+
 int MyFS::sGetAttr(const lString &pathname, sAttr &attr)
 {
     if (fd < 0) return -EIO;
