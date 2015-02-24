@@ -16,5 +16,7 @@ This programming interface is designed to be integrated into a Qt program.
 
 ## Instructions
 
-SimpleFuse is still under development...
-Please, come back later!
+Add the lines `DEFINES += "_FILE_OFFSET_BITS=64"` and `LIBS += -lfuse` to your .pro file.
+Implement your own class inheriting QSimpleFuse and write your own version of the virtual functions.
+You may inspire yourself from the examples given in the corresponding directory.
+
