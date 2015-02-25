@@ -1,3 +1,9 @@
+/*
+ * Copyright (c) 2015, Rémi Bazin <bazin.remi@gmail.com>
+ * All rights reserved.
+ * See LICENSE for licensing details.
+ */
+
 #ifndef __SIMPLIFIER_H__
 #define __SIMPLIFIER_H__
 
