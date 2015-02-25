@@ -19,11 +19,13 @@ SOURCES += main.cpp\
         mainwindow.cpp \
     sfuse/simplifier.cpp \
     sfuse/qsimplefuse.cpp \
+    sfuse/qdaemon.cpp \
     myfs.cpp
 
 HEADERS  += mainwindow.h \
     sfuse/simplifier.h \
     sfuse/qsimplefuse.h \
+    sfuse/qdaemon.h \
     myfs.h
 
 FORMS    += mainwindow.ui
