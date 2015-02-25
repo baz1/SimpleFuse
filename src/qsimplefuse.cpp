@@ -341,7 +341,7 @@ void QSimpleFuse::sDestroy()
 }
 
 /*!
-    Gets the size of the filesystem (number of bytes put in \a size) and its free space (number of bytes written in \a free).
+    Gets the size of the filesystem (number of bytes put in \a bsize) and its free space (number of bytes written in \a bfree).
 
     Returns \c 0 on success, or one of these values on error:
     \table
@@ -353,10 +353,10 @@ void QSimpleFuse::sDestroy()
             \li I/O error.
     \endtable
 */
-int QSimpleFuse::sGetSize(quint64 &size, quint64 &free)
+int QSimpleFuse::sGetSize(quint64 &bsize, quint64 &bfree)
 {
-    Q_UNUSED(size);
-    Q_UNUSED(free);
+    Q_UNUSED(bsize);
+    Q_UNUSED(bfree);
     return -ENOSYS;
 }
 
@@ -429,7 +429,7 @@ int QSimpleFuse::sGetAttr(const lString &pathname, sAttr &attr)
 
     \sa sAttr::mst_mode
 */
-int QSimpleFuse::sMkFile(const lString &pathname, mode_t mst_mode)
+int QSimpleFuse::sMkFile(const lString &pathname, quint16 mst_mode)
 {
     Q_UNUSED(pathname);
     Q_UNUSED(mst_mode);
@@ -608,7 +608,7 @@ int QSimpleFuse::sLink(const lString &pathFrom, const lString &pathTo)
 
     \sa sAttr::mst_mode
 */
-int QSimpleFuse::sChMod(const lString &pathname, mode_t mst_mode)
+int QSimpleFuse::sChMod(const lString &pathname, quint16 mst_mode)
 {
     Q_UNUSED(pathname);
     Q_UNUSED(mst_mode);
@@ -654,7 +654,7 @@ int QSimpleFuse::sChMod(const lString &pathname, mode_t mst_mode)
 
     \sa QSimpleFuse::sFTruncate()
 */
-int QSimpleFuse::sTruncate(const lString &pathname, off_t newsize)
+int QSimpleFuse::sTruncate(const lString &pathname, quint64 newsize)
 {
     Q_UNUSED(pathname);
     Q_UNUSED(newsize);
@@ -761,7 +761,7 @@ int QSimpleFuse::sUTime(const lString &pathname, time_t mst_atime, time_t mst_mt
             \li I/O error.
     \endtable
 */
-int QSimpleFuse::sOpen(const lString &pathname, int flags, int &fd)
+int QSimpleFuse::sOpen(const lString &pathname, int flags, quint32 &fd)
 {
     Q_UNUSED(pathname);
     Q_UNUSED(flags);
@@ -790,7 +790,7 @@ int QSimpleFuse::sOpen(const lString &pathname, int flags, int &fd)
             \li I/O error.
     \endtable
 */
-int QSimpleFuse::sRead(int fd, void *buf, int count, off_t offset)
+int QSimpleFuse::sRead(quint32 fd, void *buf, quint32 count, quint64 offset)
 {
     Q_UNUSED(fd);
     Q_UNUSED(buf);
@@ -826,7 +826,7 @@ int QSimpleFuse::sRead(int fd, void *buf, int count, off_t offset)
             \li I/O error.
     \endtable
 */
-int QSimpleFuse::sWrite(int fd, const void *buf, int count, off_t offset)
+int QSimpleFuse::sWrite(quint32 fd, const void *buf, quint32 count, quint64 offset)
 {
     Q_UNUSED(fd);
     Q_UNUSED(buf);
@@ -854,7 +854,7 @@ int QSimpleFuse::sWrite(int fd, const void *buf, int count, off_t offset)
     \warning The default implementation of this function returns 0
         without doing anything.
 */
-int QSimpleFuse::sSync(int fd)
+int QSimpleFuse::sSync(quint32 fd)
 {
     Q_UNUSED(fd);
     return 0;
@@ -876,7 +876,7 @@ int QSimpleFuse::sSync(int fd)
             \li I/O error.
     \endtable
 */
-int QSimpleFuse::sClose(int fd)
+int QSimpleFuse::sClose(quint32 fd)
 {
     Q_UNUSED(fd);
     return -ENOSYS;
@@ -909,7 +909,7 @@ int QSimpleFuse::sClose(int fd)
             \li I/O error.
     \endtable
 */
-int QSimpleFuse::sOpenDir(const lString &pathname, int &fd)
+int QSimpleFuse::sOpenDir(const lString &pathname, quint32 &fd)
 {
     Q_UNUSED(pathname);
     Q_UNUSED(fd);
@@ -933,7 +933,7 @@ int QSimpleFuse::sOpenDir(const lString &pathname, int &fd)
             \li I/O error.
     \endtable
 */
-int QSimpleFuse::sReadDir(int fd, char *&name)
+int QSimpleFuse::sReadDir(quint32 fd, char *&name)
 {
     Q_UNUSED(fd);
     Q_UNUSED(name);
@@ -956,7 +956,7 @@ int QSimpleFuse::sReadDir(int fd, char *&name)
             \li I/O error.
     \endtable
 */
-int QSimpleFuse::sCloseDir(int fd)
+int QSimpleFuse::sCloseDir(quint32 fd)
 {
     Q_UNUSED(fd);
     return -ENOSYS;
@@ -995,7 +995,7 @@ int QSimpleFuse::sCloseDir(int fd)
 
     \sa QSimpleFuse::sOpen()
 */
-int QSimpleFuse::sAccess(const lString &pathname, int mode)
+int QSimpleFuse::sAccess(const lString &pathname, quint8 mode)
 {
     Q_UNUSED(pathname);
     Q_UNUSED(mode);
@@ -1029,7 +1029,7 @@ int QSimpleFuse::sAccess(const lString &pathname, int mode)
 
     \sa QSimpleFuse::sTruncate()
 */
-int QSimpleFuse::sFTruncate(int fd, off_t newsize)
+int QSimpleFuse::sFTruncate(quint32 fd, quint64 newsize)
 {
     Q_UNUSED(fd);
     Q_UNUSED(newsize);
@@ -1054,7 +1054,7 @@ int QSimpleFuse::sFTruncate(int fd, off_t newsize)
 
     \sa QSimpleFuse::sGetAttr()
 */
-int QSimpleFuse::sFGetAttr(int fd, sAttr &attr)
+int QSimpleFuse::sFGetAttr(quint32 fd, sAttr &attr)
 {
     Q_UNUSED(fd);
     Q_UNUSED(attr);

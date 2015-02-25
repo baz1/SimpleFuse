@@ -36,7 +36,7 @@ private:
     static int sigintFd[2];
     static int sighupFd[2];
     static int sigtermFd[2];
-    static volatile QDaemon *instance;
+    static volatile QDaemon *_instance;
     static struct sigaction oldSigInt, oldSigHup, oldSigTerm;
     static bool pairsDone;
 private:

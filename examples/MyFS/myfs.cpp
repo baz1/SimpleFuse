@@ -170,7 +170,7 @@ int MyFS::sGetAttr(const lString &pathname, sAttr &attr)
     return myGetAttr(addr, attr);
 }
 
-int MyFS::sMkFile(const lString &pathname, mode_t mst_mode)
+int MyFS::sMkFile(const lString &pathname, quint16 mst_mode)
 {
 #if READONLY_FS
     Q_UNUSED(pathname);
@@ -350,7 +350,7 @@ int MyFS::sLink(const lString &pathFrom, const lString &pathTo)
 #endif /* READONLY_FS */
 }
 
-int MyFS::sChMod(const lString &pathname, mode_t mst_mode)
+int MyFS::sChMod(const lString &pathname, quint16 mst_mode)
 {
 #if READONLY_FS
     Q_UNUSED(pathname);
@@ -380,7 +380,7 @@ int MyFS::sChMod(const lString &pathname, mode_t mst_mode)
 #endif /* READONLY_FS */
 }
 
-int MyFS::sTruncate(const lString &pathname, off_t newsize)
+int MyFS::sTruncate(const lString &pathname, quint64 newsize)
 {
 #if READONLY_FS
     Q_UNUSED(pathname);
@@ -388,6 +388,8 @@ int MyFS::sTruncate(const lString &pathname, off_t newsize)
     return -EROFS;
 #else
     if (fd < 0) return -EIO;
+    if (newsize > 0xFFFFFFFFL)
+        return -EINVAL;
     quint32 nodeAddr;
     quint16 mshort;
     lString shallowCopy = pathname;
@@ -403,7 +405,7 @@ int MyFS::sTruncate(const lString &pathname, off_t newsize)
         return -EISDIR;
     if (!(mshort & S_IWUSR))
         return -EACCES;
-    return myTruncate(nodeAddr, newsize);
+    return myTruncate(nodeAddr, (quint32) newsize);
 #endif /* READONLY_FS */
 }
 
@@ -432,7 +434,7 @@ int MyFS::sUTime(const lString &pathname, time_t mst_atime, time_t mst_mtime)
 #endif /* READONLY_FS */
 }
 
-int MyFS::sOpen(const lString &pathname, int flags, int &fd)
+int MyFS::sOpen(const lString &pathname, int flags, quint32 &fd)
 {
     if (this->fd < 0) return -EIO;
 #if READONLY_FS
@@ -485,7 +487,7 @@ int MyFS::sOpen(const lString &pathname, int flags, int &fd)
         myFile.fileLength = ntohl(myFile.fileLength);
     }
     fd = 0;
-    while ((fd < openFiles.count()) && openFiles.at(fd).nodeAddr) ++fd;
+    while ((fd < (quint32) openFiles.count()) && openFiles.at(fd).nodeAddr) ++fd;
     myFile.partLength = ntohl(myFile.partLength);
     myFile.nextAddr = ntohl(myFile.nextAddr);
     myFile.partAddr = myFile.nodeAddr;
@@ -512,7 +514,7 @@ int MyFS::sOpen(const lString &pathname, int flags, int &fd)
     } else {
         myFile.currentAddr = myFile.nodeAddr + 20;
     }
-    if (fd == openFiles.count())
+    if (fd == (quint32) openFiles.count())
     {
         if (fd > MAX_OPEN_FILES)
             return -ENFILE;
@@ -523,9 +525,9 @@ int MyFS::sOpen(const lString &pathname, int flags, int &fd)
     return 0;
 }
 
-int MyFS::sRead(int fd, void *buf, int count, off_t offset)
+int MyFS::sRead(quint32 fd, void *buf, quint32 count, quint64 offset)
 {
-    if ((fd >= openFiles.count()) || (!openFiles.at(fd).nodeAddr) || (!openFiles.at(fd).isRegular))
+    if ((fd >= (quint32) openFiles.count()) || (!openFiles.at(fd).nodeAddr) || (!openFiles.at(fd).isRegular))
         return -EBADF;
     if (this->fd < 0) return -EIO;
     OpenFile &myFile = openFiles[fd];
@@ -576,9 +578,9 @@ int MyFS::sRead(int fd, void *buf, int count, off_t offset)
     }
 }
 
-int MyFS::sWrite(int fd, const void *buf, int count, off_t offset)
+int MyFS::sWrite(quint32 fd, const void *buf, quint32 count, quint64 offset)
 {
-    if ((fd >= openFiles.count()) || (!openFiles.at(fd).nodeAddr) || (!openFiles.at(fd).isRegular))
+    if ((fd >= (quint32) openFiles.count()) || (!openFiles.at(fd).nodeAddr) || (!openFiles.at(fd).isRegular))
         return -EBADF;
     if (this->fd < 0) return -EIO;
     OpenFile &myFile = openFiles[fd];
@@ -586,7 +588,9 @@ int MyFS::sWrite(int fd, const void *buf, int count, off_t offset)
         return -EBADF;
     if (offset + count > myFile.fileLength)
     {
-        int ret_value = myTruncate(myFile.nodeAddr, offset + count);
+        if (offset + count > 0xFFFFFFFFL)
+            return -EFBIG;
+        int ret_value = myTruncate(myFile.nodeAddr, (quint32) (offset + count));
         if (ret_value != 0)
             return ret_value;
     }
@@ -633,16 +637,16 @@ int MyFS::sWrite(int fd, const void *buf, int count, off_t offset)
     }
 }
 
-int MyFS::sSync(int fd)
+int MyFS::sSync(quint32 fd)
 {
-    if ((fd >= openFiles.count()) || (!openFiles.at(fd).nodeAddr) || (!openFiles.at(fd).isRegular))
+    if ((fd >= (quint32) openFiles.count()) || (!openFiles.at(fd).nodeAddr) || (!openFiles.at(fd).isRegular))
         return -EBADF;
     return 0;
 }
 
-int MyFS::sClose(int fd)
+int MyFS::sClose(quint32 fd)
 {
-    if ((fd >= openFiles.count()) || (!openFiles.at(fd).nodeAddr) || (!openFiles.at(fd).isRegular))
+    if ((fd >= (quint32) openFiles.count()) || (!openFiles.at(fd).nodeAddr) || (!openFiles.at(fd).isRegular))
         return -EBADF;
     OpenFile *file = &openFiles[fd];
     if (file->flags & OPEN_FILE_FLAGS_MODIFIED)
@@ -660,7 +664,7 @@ int MyFS::sClose(int fd)
     return 0;
 }
 
-int MyFS::sOpenDir(const lString &pathname, int &fd)
+int MyFS::sOpenDir(const lString &pathname, quint32 &fd)
 {
     if (this->fd < 0) return -EIO;
     OpenFile myDir;
@@ -683,11 +687,11 @@ int MyFS::sOpenDir(const lString &pathname, int &fd)
     if (!(mshort & S_IRUSR))
         return -EACCES;
     fd = 0;
-    while ((fd < openFiles.count()) && openFiles.at(fd).nodeAddr) ++fd;
+    while ((fd < (quint32) openFiles.count()) && openFiles.at(fd).nodeAddr) ++fd;
     myDir.currentAddr = myDir.nodeAddr + 16;
     myDir.nextAddr = ntohl(myDir.nextAddr);
     myDir.isRegular = false;
-    if (fd == openFiles.count())
+    if (fd == (quint32) openFiles.count())
     {
         if (fd > MAX_OPEN_FILES)
             return -ENFILE;
@@ -698,9 +702,9 @@ int MyFS::sOpenDir(const lString &pathname, int &fd)
     return 0;
 }
 
-int MyFS::sReadDir(int fd, char *&name)
+int MyFS::sReadDir(quint32 fd, char *&name)
 {
-    if ((fd >= openFiles.count()) || (!openFiles.at(fd).nodeAddr) || openFiles.at(fd).isRegular)
+    if ((fd >= (quint32) openFiles.count()) || (!openFiles.at(fd).nodeAddr) || openFiles.at(fd).isRegular)
         return -EBADF;
     if (this->fd < 0) return -EIO;
     OpenFile *file = &openFiles[fd];
@@ -743,9 +747,9 @@ ioerror:
     return -EIO;
 }
 
-int MyFS::sCloseDir(int fd)
+int MyFS::sCloseDir(quint32 fd)
 {
-    if ((fd >= openFiles.count()) || (!openFiles.at(fd).nodeAddr) || openFiles.at(fd).isRegular)
+    if ((fd >= (quint32) openFiles.count()) || (!openFiles.at(fd).nodeAddr) || openFiles.at(fd).isRegular)
         return -EBADF;
     OpenFile *file = &openFiles[fd];
     file->nodeAddr = 0;
@@ -754,7 +758,7 @@ int MyFS::sCloseDir(int fd)
     return 0;
 }
 
-int MyFS::sAccess(const lString &pathname, int mode)
+int MyFS::sAccess(const lString &pathname, quint8 mode)
 {
     if (fd < 0) return -EIO;
     quint32 addr;
@@ -783,25 +787,27 @@ int MyFS::sAccess(const lString &pathname, int mode)
     return 0;
 }
 
-int MyFS::sFTruncate(int fd, off_t newsize)
+int MyFS::sFTruncate(quint32 fd, quint64 newsize)
 {
 #if READONLY_FS
     Q_UNUSED(fd);
     Q_UNUSED(newsize);
     return -EROFS;
 #else
-    if ((fd >= openFiles.count()) || (!openFiles.at(fd).nodeAddr) || (!openFiles.at(fd).isRegular))
+    if ((fd >= (quint32) openFiles.count()) || (!openFiles.at(fd).nodeAddr) || (!openFiles.at(fd).isRegular))
         return -EBADF;
     if (this->fd < 0) return -EIO;
+    if (newsize > 0xFFFFFFFFL)
+        return -EINVAL;
     OpenFile *file = &openFiles[fd];
-    file->fileLength = newsize;
+    file->fileLength = (quint32) newsize;
     return myTruncate(file->nodeAddr, file->fileLength);
 #endif /* READONLY_FS */
 }
 
-int MyFS::sFGetAttr(int fd, sAttr &attr)
+int MyFS::sFGetAttr(quint32 fd, sAttr &attr)
 {
-    if ((fd >= openFiles.count()) || (!openFiles.at(fd).nodeAddr))
+    if ((fd >= (quint32) openFiles.count()) || (!openFiles.at(fd).nodeAddr))
         return -EBADF;
     if (this->fd < 0) return -EIO;
     return myGetAttr(openFiles.at(fd).nodeAddr, attr);
@@ -1073,7 +1079,7 @@ int MyFS::myUnlink(const lString &pathname, bool &isDir, quint32 *nodeAddr)
                     }
                 } else {
                     /* If this is a directory, check if it is empty */
-                    int myfd;
+                    quint32 myfd;
                     char *entryName;
                     ret_value = sOpenDir(pathname, myfd);
                     if (ret_value != 0)
@@ -1172,20 +1178,20 @@ int MyFS::myGetAttr(quint32 addr, sAttr &attr)
     quint16 mshort;
     if (read(fd, &mshort, 2) != 2)
         return -EIO;
-    attr.mst_nlink = (nlink_t) ntohs(mshort);
+    attr.mst_nlink = (quint32) ntohs(mshort);
     if (read(fd, &mshort, 2) != 2)
         return -EIO;
-    attr.mst_mode = (mode_t) ntohs(mshort);
+    attr.mst_mode = ntohs(mshort);
     if (attr.mst_mode & SF_MODE_REGULARFILE)
     {
         if (read(fd, &addr, 4) != 4)
             return -EIO;
-        attr.mst_size = (off_t) ntohl(addr);
+        attr.mst_size = (quint64) ntohl(addr);
     }
     return 0;
 }
 
-int MyFS::myTruncate(quint32 addr, off_t newsize)
+int MyFS::myTruncate(quint32 addr, quint32 newsize)
 {
 #if READONLY_FS
     Q_UNUSED(addr);
@@ -1194,8 +1200,6 @@ int MyFS::myTruncate(quint32 addr, off_t newsize)
 #else
     quint32 block_size, next_block, file_size, mytime;
     quint32 modifNodeAddr = addr, modifNodeSize = (quint32) newsize, modifNodePart = 0;
-    if (newsize > 0xFFFFFFFFL)
-        return -EINVAL;
     if (lseek(fd, addr, SEEK_SET) != addr)
         return -EIO;
     if (read(fd, &block_size, 4) != 4)

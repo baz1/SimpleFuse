@@ -25,9 +25,9 @@ struct lString
 
 struct sAttr
 {
-    mode_t    mst_mode;  // (0x4000 if directory, 0x8000 if file) + file permissions (9 lowest bits, owner-read is highest, others-execute is lowest)
-    nlink_t   mst_nlink; // number of hard links
-    off_t     mst_size;  // size if file
+    quint16   mst_mode;  // (0x4000 if directory, 0x8000 if file) + file permissions (9 lowest bits, owner-read is highest, others-execute is lowest)
+    quint32   mst_nlink; // number of hard links
+    quint64   mst_size;  // size if file
     time_t    mst_atime; // Last access time
     time_t    mst_mtime; // Last modification time
 };
@@ -46,13 +46,13 @@ public:
     virtual void sDestroy();
 
     /* Get the filesystem size and free size */
-    virtual int sGetSize(quint64 &size, quint64 &free);
+    virtual int sGetSize(quint64 &bsize, quint64 &bfree);
 
     /* Get file attributes */
     virtual int sGetAttr(const lString &pathname, sAttr &attr);
 
     /* Create a file */
-    virtual int sMkFile(const lString &pathname, mode_t mst_mode);
+    virtual int sMkFile(const lString &pathname, quint16 mst_mode);
 
     /* Remove a file */
     virtual int sRmFile(const lString &pathname, bool isDir);
@@ -64,46 +64,46 @@ public:
     virtual int sLink(const lString &pathFrom, const lString &pathTo);
 
     /* Change file permissions */
-    virtual int sChMod(const lString &pathname, mode_t mst_mode);
+    virtual int sChMod(const lString &pathname, quint16 mst_mode);
 
     /* Change the size of a file */
-    virtual int sTruncate(const lString &pathname, off_t newsize);
+    virtual int sTruncate(const lString &pathname, quint64 newsize);
 
     /* Change last modification/access time of a file */
     virtual int sUTime(const lString &pathname, time_t mst_atime, time_t mst_mtime);
 
     /* Open a file */
-    virtual int sOpen(const lString &pathname, int flags, int &fd);
+    virtual int sOpen(const lString &pathname, int flags, quint32 &fd);
 
     /* Read open file */
-    virtual int sRead(int fd, void *buf, int count, off_t offset);
+    virtual int sRead(quint32 fd, void *buf, quint32 count, quint64 offset);
 
     /* Write open file */
-    virtual int sWrite(int fd, const void *buf, int count, off_t offset);
+    virtual int sWrite(quint32 fd, const void *buf, quint32 count, quint64 offset);
 
     /* Flush cached data */
-    virtual int sSync(int fd);
+    virtual int sSync(quint32 fd);
 
     /* Close a file */
-    virtual int sClose(int fd);
+    virtual int sClose(quint32 fd);
 
     /* Open a directory */
-    virtual int sOpenDir(const lString &pathname, int &fd);
+    virtual int sOpenDir(const lString &pathname, quint32 &fd);
 
     /* Read a directory entry */
-    virtual int sReadDir(int fd, char *&name);
+    virtual int sReadDir(quint32 fd, char *&name);
 
     /* Close a directory */
-    virtual int sCloseDir(int fd);
+    virtual int sCloseDir(quint32 fd);
 
     /* Check access to a file */
-    virtual int sAccess(const lString &pathname, int mode);
+    virtual int sAccess(const lString &pathname, quint8 mode);
 
     /* Change the size of an open file */
-    virtual int sFTruncate(int fd, off_t newsize);
+    virtual int sFTruncate(quint32 fd, quint64 newsize);
 
     /* Get open file attributes */
-    virtual int sFGetAttr(int fd, sAttr &attr);
+    virtual int sFGetAttr(quint32 fd, sAttr &attr);
 private:
     bool is_ok;
     int argc;

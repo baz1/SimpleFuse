@@ -29,7 +29,7 @@
 int QDaemon::sigintFd[2];
 int QDaemon::sighupFd[2];
 int QDaemon::sigtermFd[2];
-volatile QDaemon *QDaemon::instance = 0;
+volatile QDaemon *QDaemon::_instance = 0;
 struct sigaction QDaemon::oldSigInt, QDaemon::oldSigHup, QDaemon::oldSigTerm;
 bool QDaemon::pairsDone = false;
 
@@ -41,12 +41,12 @@ bool QDaemon::pairsDone = false;
 QDaemon::QDaemon(QObject *parent) : QObject(parent)
 {
     /* Check whether or not this is the only instance (never mind the slight concurrency threat) */
-    if (instance)
+    if (_instance)
     {
         qFatal("MyDaemon already has an active instance!");
         exit(1);
     }
-    instance = this;
+    _instance = this;
     /* Create socket pairs, if not already done */
     if (!pairsDone)
     {
@@ -77,7 +77,7 @@ QDaemon::QDaemon(QObject *parent) : QObject(parent)
     /* Start capturing, thus linking the signals to the other end of the pairs */
     /* (never mind the slight timeout between this and the QObject::connect that is following) */
     struct sigaction sigInt, sigHup, sigTerm;
-    sigInt.sa_handler = QDaemon::intSignalHandler;
+    sigInt.sa_handler = intSignalHandler;
     sigemptyset(&sigInt.sa_mask);
     sigInt.sa_flags = 0;
     sigInt.sa_flags |= SA_RESTART;
@@ -86,7 +86,7 @@ QDaemon::QDaemon(QObject *parent) : QObject(parent)
         qFatal("Error while installing the signal handle for SIGINT");
         exit(1);
     }
-    sigHup.sa_handler = QDaemon::hupSignalHandler;
+    sigHup.sa_handler = hupSignalHandler;
     sigemptyset(&sigHup.sa_mask);
     sigHup.sa_flags = 0;
     sigHup.sa_flags |= SA_RESTART;
@@ -95,7 +95,7 @@ QDaemon::QDaemon(QObject *parent) : QObject(parent)
         qFatal("Error while installing the signal handle for SIGHUP");
         exit(1);
     }
-    sigTerm.sa_handler = QDaemon::termSignalHandler;
+    sigTerm.sa_handler = termSignalHandler;
     sigemptyset(&sigTerm.sa_mask);
     sigTerm.sa_flags = 0;
     sigTerm.sa_flags |= SA_RESTART;
@@ -132,7 +132,7 @@ QDaemon::~QDaemon()
     delete snHup;
     delete snTerm;
     /* Allow future new instances */
-    instance = 0;
+    _instance = 0;
 }
 
 /*!
