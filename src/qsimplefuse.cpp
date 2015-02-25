@@ -25,6 +25,9 @@
 
     All the functions that you do not implement will be considered "unsupported" by the filesystem.
 
+    You may also consider using the \l QDaemon provided alongside as it will prevent the application
+    from exiting without unmounting the filesystem, when receiving a SIGINT signal for instance (Ctrl+C).
+
     \warning You need to add the following lines to your .pro file:
 
     DEFINES += "_FILE_OFFSET_BITS=64"

@@ -18,5 +18,7 @@ This programming interface is designed to be integrated into a Qt program.
 
 Add the lines `DEFINES += "_FILE_OFFSET_BITS=64"` and `LIBS += -lfuse` to your .pro file.
 Implement your own class inheriting QSimpleFuse and write your own version of the virtual functions.
+To prevent your application from exiting without unmounting your filesystem when receiving a signal such
+as SIGINT (Ctrl+C), you should also use the QDaemon class provided here.
 You may inspire yourself from the examples given in the corresponding directory.
 
