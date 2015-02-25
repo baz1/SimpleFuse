@@ -977,7 +977,7 @@ int MyFS::myUnlink(const lString &pathname, bool &isDir, quint32 *nodeAddr)
     len -= shallowCopy.str_len;
     int start = shallowCopy.str_len;
     /* Get the address of the parent directory */
-    quint32 dirAddr, beforeAddr, currentAddr;
+    quint32 dirAddr, beforeAddr = 0, currentAddr;
     int ret_value = getAddress(shallowCopy, dirAddr);
     if (ret_value != 0)
         return ret_value;
