@@ -25,9 +25,6 @@
 
     All the functions that you do not implement will be considered "unsupported" by the filesystem.
 
-    You may also consider using the \l QDaemon provided alongside as it will prevent the application
-    from exiting without unmounting the filesystem, when receiving a SIGINT signal for instance (Ctrl+C).
-
     \warning You need to add the following lines to your .pro file:
 
     DEFINES += "_FILE_OFFSET_BITS=64"
@@ -204,11 +201,13 @@ char *getCStrFromQStr(const QString &str)
 
     This filesystem is mounted at \a mountPoint.
     If \a singlethreaded is \c true, it will not be multithreaded.
+
     If \a handleSignals is \c true, the handlers for the INT, HUP and TERM signals will be
     changed so that whenever these are received, the filesystem will be unmounted prior
     to the call of the previous signal handlers.
     Else, the user has to take care of those so that the program does not exit without unmounting
     the filesystem.
+    You may also consider using the \l QDaemon provided alongside to handle signals in a more accurate way.
 
     \warning Only one single instance at a time can be created / used.
 */
