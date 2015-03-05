@@ -2,7 +2,6 @@
 #include "ui_mainwindow.h"
 
 #include "myfs.h"
-#include "sfuse/qdaemon.h"
 
 #ifndef QT_NO_DEBUG
 #include <QDebug>
@@ -14,21 +13,12 @@
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWindow), mountDir(), fs(NULL)
 {
     ui->setupUi(this);
-    QDaemon *daemonizer = new QDaemon(this);
-    connect(daemonizer, SIGNAL(sigINT()), this, SLOT(myExit()));
-    connect(daemonizer, SIGNAL(sigTERM()), this, SLOT(myExit()));
 }
 
 MainWindow::~MainWindow()
 {
     if (fs) umount();
     delete ui;
-}
-
-void MainWindow::myExit()
-{
-    if (fs) umount();
-    close();
 }
 
 void MainWindow::umount()
