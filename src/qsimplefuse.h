@@ -13,6 +13,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <QString>
+#include <signal.h>
 
 struct lString
 {
@@ -35,7 +36,8 @@ struct sAttr
 class QSimpleFuse
 {
 public:
-    explicit QSimpleFuse(QString mountPoint, bool singlethreaded = false);
+    explicit QSimpleFuse(QString mountPoint, bool singlethreaded = false, bool handleSignals = true);
+    void unmount();
     virtual ~QSimpleFuse();
     bool checkStatus();
 public:
@@ -105,9 +107,14 @@ public:
     /* Get open file attributes */
     virtual int sFGetAttr(quint32 fd, sAttr &attr);
 private:
+    /* Unix signal handlers */
+    static void mySignalHandler(int sig);
+private:
     bool is_ok;
     int argc;
     char **argv;
+    struct sigaction oldSigInt, oldSigHup, oldSigTerm;
+    bool signalHandling;
 public: /* Intended for private use only */
     static QSimpleFuse * volatile _instance;
 };

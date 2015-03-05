@@ -204,10 +204,15 @@ char *getCStrFromQStr(const QString &str)
 
     This filesystem is mounted at \a mountPoint.
     If \a singlethreaded is \c true, it will not be multithreaded.
+    If \a handleSignals is \c true, the handlers for the INT, HUP and TERM signals will be
+    changed so that whenever these are received, the filesystem will be unmounted prior
+    to the call of the previous signal handlers.
+    Else, the user has to take care of those so that the program does not exit without unmounting
+    the filesystem.
 
     \warning Only one single instance at a time can be created / used.
 */
-QSimpleFuse::QSimpleFuse(QString mountPoint, bool singlethreaded)
+QSimpleFuse::QSimpleFuse(QString mountPoint, bool singlethreaded, bool handleSignals) : signalHandling(false)
 {
     /* Check whether or not this is a new instance */
     if (QSimpleFuse::_instance)
@@ -219,6 +224,39 @@ QSimpleFuse::QSimpleFuse(QString mountPoint, bool singlethreaded)
         return;
     }
     QSimpleFuse::_instance = this;
+    /* Handle signals if required */
+    signalHandling = handleSignals;
+    if (signalHandling)
+    {
+        struct sigaction mySig;
+        mySig.sa_handler = mySignalHandler;
+        sigemptyset(&mySig.sa_mask);
+        mySig.sa_flags = SA_RESTART;
+        if (sigaction(SIGINT, &mySig, &oldSigInt))
+        {
+#ifndef QT_NO_DEBUG
+            perror("Error while installing the signal handle for SIGINT");
+#endif
+            is_ok = false;
+            return;
+        }
+        if (sigaction(SIGHUP, &mySig, &oldSigHup))
+        {
+#ifndef QT_NO_DEBUG
+            perror("Error while installing the signal handle for SIGHUP");
+#endif
+            is_ok = false;
+            return;
+        }
+        if (sigaction(SIGTERM, &mySig, &oldSigTerm))
+        {
+#ifndef QT_NO_DEBUG
+            perror("Error while installing the signal handle for SIGTERM");
+#endif
+            is_ok = false;
+            return;
+        }
+    }
     /* Initialize fs */
     memset(&fs, 0, sizeof(fs));
     /* Recreating custom arguments */
@@ -284,10 +322,33 @@ cancelmount:
 }
 
 /*!
-    Destructs the object and unmount the filesystem.
+    Asks for a premature unmout.
 */
-QSimpleFuse::~QSimpleFuse()
+void QSimpleFuse::unmount()
 {
+    /* Restore previous handlers if necessary */
+    if (signalHandling)
+    {
+        if (sigaction(SIGINT, &oldSigInt, 0))
+        {
+#ifndef QT_NO_DEBUG
+            perror("Error while restoring the signal handle for SIGINT");
+#endif
+        }
+        if (sigaction(SIGHUP, &oldSigHup, 0))
+        {
+#ifndef QT_NO_DEBUG
+            perror("Error while restoring the signal handle for SIGHUP");
+#endif
+        }
+        if (sigaction(SIGTERM, &oldSigTerm, 0))
+        {
+#ifndef QT_NO_DEBUG
+            perror("Error while restoring the signal handle for SIGTERM");
+#endif
+        }
+        signalHandling = false;
+    }
     if (is_ok)
     {
         /* Aborting FS */
@@ -295,9 +356,44 @@ QSimpleFuse::~QSimpleFuse()
         fuse_unmount(fs.mountpoint, fs.ch);
         pthread_join(fs.pid, NULL);
         fs.fuse = NULL;
-        /* Allow a future new instance */
-        if (_instance == this)
-            _instance = NULL;
+        is_ok = false;
+    }
+}
+
+/*!
+    Destructs the object and unmount the filesystem.
+*/
+QSimpleFuse::~QSimpleFuse()
+{
+    /* Restore previous handlers if necessary */
+    if (signalHandling)
+    {
+        if (sigaction(SIGINT, &oldSigInt, 0))
+        {
+#ifndef QT_NO_DEBUG
+            perror("Error while restoring the signal handle for SIGINT");
+#endif
+        }
+        if (sigaction(SIGHUP, &oldSigHup, 0))
+        {
+#ifndef QT_NO_DEBUG
+            perror("Error while restoring the signal handle for SIGHUP");
+#endif
+        }
+        if (sigaction(SIGTERM, &oldSigTerm, 0))
+        {
+#ifndef QT_NO_DEBUG
+            perror("Error while restoring the signal handle for SIGTERM");
+#endif
+        }
+    }
+    if (is_ok)
+    {
+        /* Aborting FS */
+        fuse_session_exit(fuse_get_session(fs.fuse));
+        fuse_unmount(fs.mountpoint, fs.ch);
+        pthread_join(fs.pid, NULL);
+        fs.fuse = NULL;
         is_ok = false;
     }
     if (argv)
@@ -307,6 +403,9 @@ QSimpleFuse::~QSimpleFuse()
         delete[] argv;
         argv = NULL;
     }
+    /* Allow a future new instance */
+    if (_instance == this)
+        _instance = NULL;
 }
 
 /*!
@@ -1059,4 +1158,17 @@ int QSimpleFuse::sFGetAttr(quint32 fd, sAttr &attr)
     Q_UNUSED(fd);
     Q_UNUSED(attr);
     return -ENOSYS;
+}
+
+void QSimpleFuse::mySignalHandler(int sig)
+{
+    if (_instance)
+    {
+        _instance->unmount();
+        raise(sig);
+    } else {
+#ifndef QT_NO_DEBUG
+        fprintf(stderr, "Error: Signal handler still alive without any instance of QSimpleFuse.\n");
+#endif
+    }
 }
