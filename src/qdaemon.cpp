@@ -79,8 +79,7 @@ QDaemon::QDaemon(QObject *parent) : QObject(parent)
     struct sigaction sigInt, sigHup, sigTerm;
     sigInt.sa_handler = intSignalHandler;
     sigemptyset(&sigInt.sa_mask);
-    sigInt.sa_flags = 0;
-    sigInt.sa_flags |= SA_RESTART;
+    sigInt.sa_flags = SA_RESTART;
     if (sigaction(SIGINT, &sigInt, &oldSigInt))
     {
         qFatal("Error while installing the signal handle for SIGINT");
@@ -88,8 +87,7 @@ QDaemon::QDaemon(QObject *parent) : QObject(parent)
     }
     sigHup.sa_handler = hupSignalHandler;
     sigemptyset(&sigHup.sa_mask);
-    sigHup.sa_flags = 0;
-    sigHup.sa_flags |= SA_RESTART;
+    sigHup.sa_flags = SA_RESTART;
     if (sigaction(SIGHUP, &sigHup, &oldSigHup))
     {
         qFatal("Error while installing the signal handle for SIGHUP");
@@ -97,8 +95,7 @@ QDaemon::QDaemon(QObject *parent) : QObject(parent)
     }
     sigTerm.sa_handler = termSignalHandler;
     sigemptyset(&sigTerm.sa_mask);
-    sigTerm.sa_flags = 0;
-    sigTerm.sa_flags |= SA_RESTART;
+    sigTerm.sa_flags = SA_RESTART;
     if (sigaction(SIGTERM, &sigTerm, &oldSigTerm))
     {
         qFatal("Error while installing the signal handle for SIGTERM");
@@ -112,7 +109,7 @@ QDaemon::QDaemon(QObject *parent) : QObject(parent)
 QDaemon::~QDaemon()
 {
     /* Restore previous handlers */
-    if (sigaction(SIGHUP, &oldSigInt, 0))
+    if (sigaction(SIGINT, &oldSigInt, 0))
     {
         qFatal("Error while restoring the signal handle for SIGINT");
         exit(1);
@@ -122,7 +119,7 @@ QDaemon::~QDaemon()
         qFatal("Error while restoring the signal handle for SIGHUP");
         exit(1);
     }
-    if (sigaction(SIGHUP, &oldSigTerm, 0))
+    if (sigaction(SIGTERM, &oldSigTerm, 0))
     {
         qFatal("Error while restoring the signal handle for SIGTERM");
         exit(1);

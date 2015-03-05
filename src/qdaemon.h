@@ -24,9 +24,9 @@ signals:
     void sigTERM();
 private:
     /* Unix signal handlers */
-    static void intSignalHandler(int unused);
-    static void hupSignalHandler(int unused);
-    static void termSignalHandler(int unused);
+    static void intSignalHandler(int);
+    static void hupSignalHandler(int);
+    static void termSignalHandler(int);
 private slots:
     /* Qt signal handlers */
     void handleSigInt();
