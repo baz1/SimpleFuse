@@ -111,8 +111,6 @@ private:
     static void mySignalHandler(int sig);
 private:
     bool is_ok;
-    int argc;
-    char **argv;
     struct sigaction oldSigInt, oldSigHup, oldSigTerm;
     bool signalHandling;
 public: /* Intended for private use only */

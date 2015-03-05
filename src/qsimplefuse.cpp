@@ -215,7 +215,7 @@ char *getCStrFromQStr(const QString &str)
 QSimpleFuse::QSimpleFuse(QString mountPoint, bool singlethreaded, bool handleSignals) : signalHandling(false)
 {
     /* Check whether or not this is a new instance */
-    if (QSimpleFuse::_instance)
+    if (_instance)
     {
 #ifndef QT_NO_DEBUG
         fprintf(stderr, "Error: Attempted to create a second instance of QSimpleFuse.\n");
@@ -223,7 +223,7 @@ QSimpleFuse::QSimpleFuse(QString mountPoint, bool singlethreaded, bool handleSig
         is_ok = false;
         return;
     }
-    QSimpleFuse::_instance = this;
+    _instance = this;
     /* Handle signals if required */
     signalHandling = handleSignals;
     if (signalHandling)
@@ -260,6 +260,8 @@ QSimpleFuse::QSimpleFuse(QString mountPoint, bool singlethreaded, bool handleSig
     /* Initialize fs */
     memset(&fs, 0, sizeof(fs));
     /* Recreating custom arguments */
+    int argc;
+    char **argv;
 #if FULL_DEBUG
     argc = singlethreaded ? 4 : 3;
     argv = new char*[argc];
@@ -307,6 +309,9 @@ QSimpleFuse::QSimpleFuse(QString mountPoint, bool singlethreaded, bool handleSig
 #endif
         goto cancelmount;
     }
+    for (int i = 0; i < argc; ++i)
+        delete[] argv[i];
+    delete[] argv;
     if (pthread_create(&fs.pid, NULL, fuse_thread, NULL) != 0)
     {
 #ifndef QT_NO_DEBUG
@@ -365,44 +370,7 @@ void QSimpleFuse::unmount()
 */
 QSimpleFuse::~QSimpleFuse()
 {
-    /* Restore previous handlers if necessary */
-    if (signalHandling)
-    {
-        if (sigaction(SIGINT, &oldSigInt, 0))
-        {
-#ifndef QT_NO_DEBUG
-            perror("Error while restoring the signal handle for SIGINT");
-#endif
-        }
-        if (sigaction(SIGHUP, &oldSigHup, 0))
-        {
-#ifndef QT_NO_DEBUG
-            perror("Error while restoring the signal handle for SIGHUP");
-#endif
-        }
-        if (sigaction(SIGTERM, &oldSigTerm, 0))
-        {
-#ifndef QT_NO_DEBUG
-            perror("Error while restoring the signal handle for SIGTERM");
-#endif
-        }
-    }
-    if (is_ok)
-    {
-        /* Aborting FS */
-        fuse_session_exit(fuse_get_session(fs.fuse));
-        fuse_unmount(fs.mountpoint, fs.ch);
-        pthread_join(fs.pid, NULL);
-        fs.fuse = NULL;
-        is_ok = false;
-    }
-    if (argv)
-    {
-        for (int i = 0; i < argc; ++i)
-            delete[] argv[i];
-        delete[] argv;
-        argv = NULL;
-    }
+    unmount();
     /* Allow a future new instance */
     if (_instance == this)
         _instance = NULL;
